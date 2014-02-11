@@ -67,6 +67,7 @@ counter = $(i)$(eval i:=$(call plus,$(i),1))
 $(foreach c, $(layers), $(if $(filter $(XI_IO_LAYER), $(c)), $(eval XI_CONFIG += XI_IO_LAYER=$(counter)), $($(counter)) ) )
 
 ifneq (,$(findstring asynch,$(XI_IO_LAYER)))
+	XI_NOB_ENABLED := true
 	XI_CONFIG += XI_NOB_ENABLED
 endif
 
