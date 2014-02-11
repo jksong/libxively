@@ -14,5 +14,6 @@ $(XI_BINDIR)/%: %.c $(XI)
 
 $(XI):
 	$(MAKE) -C .. libxively
+	if [ $(XI_CYASSL_ENABLED) ]; then echo "$(XI_CYASSL_ENABLED)"; fi;
 
 include $(LIBXIVELY)/Makefile.rules
