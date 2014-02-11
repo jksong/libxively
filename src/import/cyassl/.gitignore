@@ -1,0 +1,14 @@
+config*
+ctaocrypt/src/src_*
+ctaocrypt/test/testctaocrypt
+cyassl/options.h
+examples/client/.deps/*
+cyassl-config
+./cyassl/options.h
+Makefile
+aminclude.am
+ctaocrypt/benchmark/.deps/*
+.deps
+.libs
+.dirstamp
+
