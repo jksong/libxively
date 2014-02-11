@@ -3,6 +3,8 @@ ctaocrypt/src/src_*
 ctaocrypt/test/testctaocrypt
 cyassl/options.h
 examples/client/.deps/*
+tests/unit
+testsuite/testsuite
 cyassl-config
 ./cyassl/options.h
 Makefile
@@ -11,4 +13,15 @@ ctaocrypt/benchmark/.deps/*
 .deps
 .libs
 .dirstamp
+benchmark
+client
+echoclient
+echoserver
+server
+src_libcyassl*
+libcyassl.la
+libtool
+rpm/spec
+stamp-h
+stamp-h1
 
