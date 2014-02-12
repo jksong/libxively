@@ -5,6 +5,7 @@ compiler:
 before_install:
   - "sudo apt-get -qq update"
   - "if [ ! $CC = 'clang' ]; then sudo apt-get -qq install qemu-system libc6:i386; fi"
+  - "sudo apt-get -qq install dc"
   ## These are quite generic and by using `env` we can parallelise builds in verty simple way, if takes too long
   - "if [ ! $CC = 'clang' ]; then
         TOOLCHAIN_NAME='arm-2013.05';
