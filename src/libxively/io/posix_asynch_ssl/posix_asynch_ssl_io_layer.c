@@ -10,8 +10,8 @@
 #include <errno.h>
 
 // local
-#include "posix_asynch_io_layer.h"
-#include "posix_asynch_data.h"
+#include "posix_asynch_ssl_io_layer.h"
+#include "posix_asynch_ssl_data.h"
 #include "xi_allocator.h"
 #include "xi_err.h"
 #include "xi_macros.h"
@@ -24,12 +24,12 @@
 extern "C" {
 #endif
 
-layer_state_t posix_asynch_io_layer_data_ready(
+layer_state_t posix_asynch_ssl_io_layer_data_ready(
       layer_connectivity_t* context
     , const void* data
     , const layer_hint_t hint )
 {
-    posix_asynch_data_t* posix_asynch_data  = ( posix_asynch_data_t* ) context->self->user_data;
+    posix_asynch_ssl_data_t* posix_asynch_ssl_data  = ( posix_asynch_ssl_data_t* ) context->self->user_data;
     const const_data_descriptor_t* buffer   = ( const const_data_descriptor_t* ) data;
 
     xi_debug_printf( "%s", buffer->data_ptr );
@@ -38,7 +38,7 @@ layer_state_t posix_asynch_io_layer_data_ready(
 
     if( buffer != 0 && buffer->data_size > 0 )
     {
-        int len = write( posix_asynch_data->socket_fd, buffer->data_ptr, buffer->data_size );
+        int len = write( posix_asynch_ssl_data->socket_fd, buffer->data_ptr, buffer->data_size );
 
         if( len < buffer->data_size )
         {
@@ -49,14 +49,14 @@ layer_state_t posix_asynch_io_layer_data_ready(
     return LAYER_STATE_NOT_READY;
 }
 
-layer_state_t posix_asynch_io_layer_on_data_ready(
+layer_state_t posix_asynch_ssl_io_layer_on_data_ready(
       layer_connectivity_t* context
     , const void* data
     , const layer_hint_t hint )
 {
-    //xi_debug_logger( "[posix_asynch_io_layer_on_data_ready]" );
+    //xi_debug_logger( "[posix_asynch_ssl_io_layer_on_data_ready]" );
 
-    posix_asynch_data_t* posix_asynch_data = ( posix_asynch_data_t* ) context->self->user_data;
+    posix_asynch_ssl_data_t* posix_asynch_ssl_data = ( posix_asynch_ssl_data_t* ) context->self->user_data;
 
     XI_UNUSED( hint );
 
@@ -77,7 +77,7 @@ layer_state_t posix_asynch_io_layer_on_data_ready(
     layer_state_t state = LAYER_STATE_OK;
 
     memset( buffer->data_ptr, 0, buffer->data_size );
-    int len = read( posix_asynch_data->socket_fd, buffer->data_ptr, buffer->data_size - 1 );
+    int len = read( posix_asynch_ssl_data->socket_fd, buffer->data_ptr, buffer->data_size - 1 );
 
     if( len < 0 )
     {
@@ -105,33 +105,33 @@ layer_state_t posix_asynch_io_layer_on_data_ready(
     return state;
 }
 
-layer_state_t posix_asynch_io_layer_close( layer_connectivity_t* context )
+layer_state_t posix_asynch_ssl_io_layer_close( layer_connectivity_t* context )
 {
-    posix_asynch_data_t* posix_asynch_data = ( posix_asynch_data_t* ) context->self->user_data;
+    posix_asynch_ssl_data_t* posix_asynch_ssl_data = ( posix_asynch_ssl_data_t* ) context->self->user_data;
 
-    XI_UNUSED( posix_asynch_data );
+    XI_UNUSED( posix_asynch_ssl_data );
 
     return LAYER_STATE_OK;
 }
 
-layer_state_t posix_asynch_io_layer_on_close( layer_connectivity_t* context )
+layer_state_t posix_asynch_ssl_io_layer_on_close( layer_connectivity_t* context )
 {
     // prepare return value
     layer_state_t ret = LAYER_STATE_OK;
 
     //
-    posix_asynch_data_t* posix_asynch_data = ( posix_asynch_data_t* ) context->self->user_data;
+    posix_asynch_ssl_data_t* posix_asynch_ssl_data = ( posix_asynch_ssl_data_t* ) context->self->user_data;
 
-    if( shutdown( posix_asynch_data->socket_fd, SHUT_RDWR ) == -1 )
+    if( shutdown( posix_asynch_ssl_data->socket_fd, SHUT_RDWR ) == -1 )
     {
         xi_set_err( XI_SOCKET_SHUTDOWN_ERROR );
-        close( posix_asynch_data->socket_fd ); // just in case
+        close( posix_asynch_ssl_data->socket_fd ); // just in case
         ret = LAYER_STATE_ERROR;
         goto err_handling;
     }
 
     // close the connection & the socket
-    if( close( posix_asynch_data->socket_fd ) == -1 )
+    if( close( posix_asynch_ssl_data->socket_fd ) == -1 )
     {
         xi_set_err( XI_SOCKET_CLOSE_ERROR );
         ret = LAYER_STATE_ERROR;
@@ -140,7 +140,7 @@ layer_state_t posix_asynch_io_layer_on_close( layer_connectivity_t* context )
 
 err_handling:
     // cleanup the memory
-    if( posix_asynch_data ) { XI_SAFE_FREE( posix_asynch_data ); }
+    if( posix_asynch_ssl_data ) { XI_SAFE_FREE( posix_asynch_ssl_data ); }
 
     return ret;
 }
@@ -157,16 +157,16 @@ layer_t* connect_to_endpoint(
         xi_debug_logger( msg );
 #endif
 
-    posix_asynch_data_t* posix_asynch_data                    = xi_alloc( sizeof( posix_asynch_data_t ) );
+    posix_asynch_ssl_data_t* posix_asynch_ssl_data                    = xi_alloc( sizeof( posix_asynch_ssl_data_t ) );
 
-    XI_CHECK_MEMORY( posix_asynch_data );
+    XI_CHECK_MEMORY( posix_asynch_ssl_data );
 
-    layer->user_data                            = ( void* ) posix_asynch_data;
+    layer->user_data                            = ( void* ) posix_asynch_ssl_data;
 
     xi_debug_logger( "Creating socket..." );
-    posix_asynch_data->socket_fd                       = socket( AF_INET, SOCK_STREAM, 0 );
+    posix_asynch_ssl_data->socket_fd                       = socket( AF_INET, SOCK_STREAM, 0 );
 
-    if( posix_asynch_data->socket_fd == -1 )
+    if( posix_asynch_ssl_data->socket_fd == -1 )
     {
         xi_debug_logger( "Socket creation [failed]" );
         xi_set_err( XI_SOCKET_INITIALIZATION_ERROR );
@@ -177,7 +177,7 @@ layer_t* connect_to_endpoint(
 
     xi_debug_logger( "Setting socket non blocking behaviour..." );
 
-    int flags = fcntl( posix_asynch_data->socket_fd, F_GETFL, 0 );
+    int flags = fcntl( posix_asynch_ssl_data->socket_fd, F_GETFL, 0 );
 
     if( flags == -1 )
     {
@@ -186,7 +186,7 @@ layer_t* connect_to_endpoint(
         goto err_handling;
     }
 
-    if( fcntl( posix_asynch_data->socket_fd, F_SETFL, flags | O_NONBLOCK ) == -1 )
+    if( fcntl( posix_asynch_ssl_data->socket_fd, F_SETFL, flags | O_NONBLOCK ) == -1 )
     {
         xi_debug_logger( "Socket non blocking behaviour [failed]" );
         xi_set_err( XI_SOCKET_INITIALIZATION_ERROR );
@@ -220,7 +220,7 @@ layer_t* connect_to_endpoint(
 
     xi_debug_logger( "Connecting to the endpoint..." );
 
-    if( connect( posix_asynch_data->socket_fd, ( struct sockaddr* ) &name, sizeof( struct sockaddr ) ) == -1 )
+    if( connect( posix_asynch_ssl_data->socket_fd, ( struct sockaddr* ) &name, sizeof( struct sockaddr ) ) == -1 )
     {
         if( errno != EINPROGRESS )
         {
@@ -235,13 +235,13 @@ layer_t* connect_to_endpoint(
 
     // POSTCONDITIONS
     assert( layer != 0 );
-    assert( posix_asynch_data->socket_fd != -1 );
+    assert( posix_asynch_ssl_data->socket_fd != -1 );
 
     return layer;
 
 err_handling:
     // cleanup the memory
-    if( posix_asynch_data ) { XI_SAFE_FREE( posix_asynch_data ); }
+    if( posix_asynch_ssl_data ) { XI_SAFE_FREE( posix_asynch_ssl_data ); }
 
     return 0;
 }
