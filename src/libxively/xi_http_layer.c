@@ -894,7 +894,7 @@ layer_state_t http_layer_on_data_ready(
                             , ( const_data_descriptor_t* ) data
                             , pv5 );
 
-                if( sscanf_state == 0 )
+                if( sscanf_state == 0 && http_layer_data->counter < http_layer_data->content_length )
                 {
                     YIELD( context->self->layer_states[ FUNCTION_ID_ON_DATA_READY ], LAYER_STATE_MORE_DATA );
                 }
