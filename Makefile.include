@@ -54,7 +54,7 @@ else
 endif # XI_OVERRIDE_ARFLAGS
 
 #CALCULATIONS OF THE PROPER ID OF PICKED IO_LAYER
-layers += posix dummy mbed posix_asynch posix_ssl_asynch
+layers += posix dummy mbed posix_asynch posix_asynch_ssl
 asynch_layers += posix_asynch
 
 define plus
@@ -74,6 +74,7 @@ endif
 ifneq (,$(findstring posix,$(XI_IO_LAYER)))
 	ifneq (,$(findstring ssl,$(XI_IO_LAYER)))
 		XI_CYASSL_ENABLED := true
+		export XI_CYASSL_ENABLED
 	endif
 endif
 
