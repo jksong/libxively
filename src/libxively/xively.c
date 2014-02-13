@@ -173,10 +173,11 @@ uint32_t xi_get_network_timeout( void )
 // LAYERS SETTINGS
 //-----------------------------------------------------------------------
 
-#define XI_IO_POSIX           0
-#define XI_IO_DUMMY           1
-#define XI_IO_MBED            2
-#define XI_IO_POSIX_ASYNCH    3
+#define XI_IO_POSIX             0
+#define XI_IO_DUMMY             1
+#define XI_IO_MBED              2
+#define XI_IO_POSIX_ASYNCH      3
+#define XI_IO_POSIX_SSL_ASYNCH  4
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /// \brief The LAYERS_ID enum
@@ -248,6 +249,20 @@ DEFINE_CONNECTION_SCHEME( CONNECTION_SCHEME_1, CONNECTION_SCHEME_1_DATA );
     BEGIN_LAYER_TYPES_CONF()
           LAYER_TYPE( IO_LAYER, &posix_asynch_io_layer_data_ready, &posix_asynch_io_layer_on_data_ready
                               , &posix_asynch_io_layer_close, &posix_asynch_io_layer_on_close )
+        , LAYER_TYPE( HTTP_LAYER, &http_layer_data_ready, &http_layer_on_data_ready
+                                , &http_layer_close, &http_layer_on_close )
+        , LAYER_TYPE( CSV_LAYER, &csv_layer_data_ready, &csv_layer_on_data_ready
+                            , &csv_layer_close, &csv_layer_on_close )
+    END_LAYER_TYPES_CONF()
+#elif XI_IO_LAYER == XI_IO_POSIX_SSL_ASYNCH
+    // mbed io layer
+    #include "posix_asynch_ssl_io_layer.h"
+
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+    BEGIN_LAYER_TYPES_CONF()
+          LAYER_TYPE( IO_LAYER, &posix_asynch_ssl_io_layer_data_ready, &posix_asynch_ssl_io_layer_on_data_ready
+                              , &posix_asynch_ssl_io_layer_close, &posix_asynch_ssl_io_layer_on_close )
         , LAYER_TYPE( HTTP_LAYER, &http_layer_data_ready, &http_layer_on_data_ready
                                 , &http_layer_close, &http_layer_on_close )
         , LAYER_TYPE( CSV_LAYER, &csv_layer_data_ready, &csv_layer_on_data_ready
@@ -398,7 +413,7 @@ const xi_response_t* xi_feed_get(
     {
         CALL_ON_SELF_ON_DATA_READY( io_layer, ( void *) 0, LAYER_HINT_NONE );
     }
-    
+
     CALL_ON_SELF_CLOSE( input_layer );
 
     return ( ( csv_layer_data_t* ) input_layer->user_data )->response;
@@ -437,7 +452,7 @@ const xi_response_t* xi_feed_get_all(
     {
         CALL_ON_SELF_ON_DATA_READY( io_layer, ( void *) 0, LAYER_HINT_NONE );
     }
-    
+
     CALL_ON_SELF_CLOSE( input_layer );
 
     return ( ( csv_layer_data_t* ) input_layer->user_data )->response;
@@ -477,7 +492,7 @@ const xi_response_t* xi_feed_update(
     {
         CALL_ON_SELF_ON_DATA_READY( io_layer, ( void *) 0, LAYER_HINT_NONE );
     }
-    
+
     CALL_ON_SELF_CLOSE( input_layer );
 
     return ( ( csv_layer_data_t* ) input_layer->user_data )->response;
@@ -518,7 +533,7 @@ const xi_response_t* xi_datastream_get(
     {
         CALL_ON_SELF_ON_DATA_READY( io_layer, ( void *) 0, LAYER_HINT_NONE );
     }
-    
+
     CALL_ON_SELF_CLOSE( input_layer );
 
     return ( ( csv_layer_data_t* ) input_layer->user_data )->response;
@@ -561,7 +576,7 @@ const xi_response_t* xi_datastream_create(
     {
         CALL_ON_SELF_ON_DATA_READY( io_layer, ( void *) 0, LAYER_HINT_NONE );
     }
-    
+
     CALL_ON_SELF_CLOSE( input_layer );
 
     return ( ( csv_layer_data_t* ) input_layer->user_data )->response;
@@ -603,7 +618,7 @@ const xi_response_t* xi_datastream_update(
     {
         CALL_ON_SELF_ON_DATA_READY( io_layer, ( void *) 0, LAYER_HINT_NONE );
     }
-    
+
     CALL_ON_SELF_CLOSE( input_layer );
 
     return ( ( csv_layer_data_t* ) input_layer->user_data )->response;
@@ -644,7 +659,7 @@ const xi_response_t* xi_datastream_delete(
     {
         CALL_ON_SELF_ON_DATA_READY( io_layer, ( void *) 0, LAYER_HINT_NONE );
     }
-    
+
     CALL_ON_SELF_CLOSE( input_layer );
 
     return ( ( csv_layer_data_t* ) input_layer->user_data )->response;
@@ -686,7 +701,7 @@ const xi_response_t* xi_datapoint_delete(
     {
         CALL_ON_SELF_ON_DATA_READY( io_layer, ( void *) 0, LAYER_HINT_NONE );
     }
-    
+
     CALL_ON_SELF_CLOSE( input_layer );
 
     return ( ( csv_layer_data_t* ) input_layer->user_data )->response;
@@ -729,7 +744,7 @@ extern const xi_response_t* xi_datapoint_delete_range(
     {
         CALL_ON_SELF_ON_DATA_READY( io_layer, ( void *) 0, LAYER_HINT_NONE );
     }
-    
+
     CALL_ON_SELF_CLOSE( input_layer );
 
     return ( ( csv_layer_data_t* ) input_layer->user_data )->response;
@@ -832,7 +847,7 @@ extern const xi_context_t* xi_nob_feed_get_all(
     // assign the input parameter so that can be used via the runner
     xi->input = &http_layer_input;
 
-    return xi;    
+    return xi;
 }
 
 
