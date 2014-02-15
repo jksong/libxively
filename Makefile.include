@@ -74,7 +74,10 @@ endif
 ifneq (,$(findstring posix,$(XI_IO_LAYER)))
 	ifneq (,$(findstring ssl,$(XI_IO_LAYER)))
 		XI_CYASSL_ENABLED := true
-		export XI_CYASSL_ENABLED
+		XI_CYASSL := $(LIBXIVELY)/src/import/cyassl
+		XI_CYASSL_INCLUDES := $(XI_CYASSL)/cyassl
+		XI_CYASSL_PATH := $(XI_CYASSL)/src/.libs/
+		XI_CYASSL_NAME := cyassl
 	endif
 endif
 

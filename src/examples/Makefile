@@ -7,7 +7,7 @@ XI_CFLAGS += -I../libxively/
 XI_EXAMPLES = $(addprefix $(XI_BINDIR)/,$(XI_EXAMPLE_SOURCES:.c=))
 
 ifeq ($(XI_CYASSL_ENABLED),true)
-	XI_CFLAGS += -I$(LIBXIVELY)/src/imports/cyassl/cyassl/
+	XI_CFLAGS += -I$(XI_CYASSL_INCLUDES)
 endif
 
 all: $(XI_EXAMPLES)
@@ -18,6 +18,5 @@ $(XI_BINDIR)/%: %.c $(XI)
 
 $(XI):
 	$(MAKE) -C .. libxively
-	if [ $(XI_CYASSL_ENABLED) ]; then echo "$(XI_CYASSL_ENABLED)"; fi;
 
 include $(LIBXIVELY)/Makefile.rules

@@ -7,6 +7,7 @@ docs:
 clean:
 	-rm -rf doc/html
 	$(MAKE) -C src $@
+	if [ -f ./src/import/cyassl/Makefile ]; then $(MAKE) -C ./src/import/cyassl/ $@; fi;
 
 ci_msp430:
 	$(MAKE) -C src clean
