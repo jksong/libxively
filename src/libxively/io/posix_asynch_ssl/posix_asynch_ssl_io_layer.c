@@ -157,14 +157,14 @@ layer_t* connect_to_endpoint(
         xi_debug_logger( msg );
 #endif
 
-    posix_asynch_ssl_data_t* posix_asynch_ssl_data                    = xi_alloc( sizeof( posix_asynch_ssl_data_t ) );
+    posix_asynch_ssl_data_t* posix_asynch_ssl_data  = xi_alloc( sizeof( posix_asynch_ssl_data_t ) );
 
     XI_CHECK_MEMORY( posix_asynch_ssl_data );
 
-    layer->user_data                            = ( void* ) posix_asynch_ssl_data;
+    layer->user_data                                = ( void* ) posix_asynch_ssl_data;
 
     xi_debug_logger( "Creating socket..." );
-    posix_asynch_ssl_data->socket_fd                       = socket( AF_INET, SOCK_STREAM, 0 );
+    posix_asynch_ssl_data->socket_fd                = socket( AF_INET, SOCK_STREAM, 0 );
 
     if( posix_asynch_ssl_data->socket_fd == -1 )
     {
