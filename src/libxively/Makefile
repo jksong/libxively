@@ -33,7 +33,6 @@ $(XI): $(XI_OBJS)
 	$(AR) $(XI_ARFLAGS) $(XI) $(XI_OBJS)
 
 $(CYASSL):
-	echo "CYASSL"
 	@if [ -f $(XI_CYASSL)/Makefile ]; then make -C $(XI_CYASSL); else cd $(XI_CYASSL) && ./configure --enable-static --enable-shared=no  && make && cd $(LIBXIVELY); fi;
 
 include $(LIBXIVELY)/Makefile.rules
