@@ -21,7 +21,6 @@ typedef struct layer
     layer_connectivity_t        layer_connection;
     layer_type_id_t             layer_type_id;
     void*                       user_data;
-    int16_t                     layer_states[ 5 ];
 #ifdef XI_DEBUG_LAYER_API
     layer_debug_info_t          debug_info;
 #endif

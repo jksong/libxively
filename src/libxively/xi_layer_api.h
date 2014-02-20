@@ -68,35 +68,35 @@ extern "C" {
 #define CALL_ON( layer, target, context )\
     context->layer_connection.layer->layer_functions->target( &context->layer_connection.layer->layer_connection );\
     SET_DEBUG_INFO_ON( layer, context );
-#define CALL_ON2( layer, target, context, data, impulse )\
-    context->layer_connection.layer->layer_functions->target( &context->layer_connection.layer->layer_connection, data, impulse );\
+#define CALL_ON2( layer, target, context, data, hint )\
+    context->layer_connection.layer->layer_functions->target( &context->layer_connection.layer->layer_connection, data, hint );\
     SET_DEBUG_INFO_ON( layer, context )
 #else
 #define CALL_ON( layer, target, context )\
     context->layer_connection.layer->layer_functions->target( &context->layer_connection.layer->layer_connection );
-#define CALL_ON2( layer, target, context, data, impulse )\
-    context->layer_connection.layer->layer_functions->target( &context->layer_connection.layer->layer_connection, data, impulse )
+#define CALL_ON2( layer, target, context, data, hint )\
+    context->layer_connection.layer->layer_functions->target( &context->layer_connection.layer->layer_connection, data, hint )
 #endif
 
 // ON_DEMAND
-#define CALL_ON_SELF_DATA_READY( context, data, impulse )\
-    CALL_ON2( self, data_ready, context, data, impulse )
+#define CALL_ON_SELF_DATA_READY( context, data, hint )\
+    CALL_ON2( self, data_ready, context, data, hint )
 
-#define CALL_ON_NEXT_DATA_READY( context, data, impulse )\
-    CALL_ON2( next, data_ready, context, data, impulse )
+#define CALL_ON_NEXT_DATA_READY( context, data, hint )\
+    CALL_ON2( next, data_ready, context, data, hint )
 
-#define CALL_ON_PREV_DATA_READY( context, data, impulse )\
-    CALL_ON2( prev, data_ready, context, data, impulse )
+#define CALL_ON_PREV_DATA_READY( context, data, hint )\
+    CALL_ON2( prev, data_ready, context, data, hint )
 
 // ON_DATA_READY
-#define CALL_ON_SELF_ON_DATA_READY( context, data, impulse )\
-    CALL_ON2( self, on_data_ready, context, data, impulse )
+#define CALL_ON_SELF_ON_DATA_READY( context, data, hint )\
+    CALL_ON2( self, on_data_ready, context, data, hint )
 
-#define CALL_ON_NEXT_ON_DATA_READY( context, data, impulse )\
-    CALL_ON2( next, on_data_ready, context, data, impulse )
+#define CALL_ON_NEXT_ON_DATA_READY( context, data, hint )\
+    CALL_ON2( next, on_data_ready, context, data, hint )
 
-#define CALL_ON_PREV_ON_DATA_READY( context, data, impulse )\
-    CALL_ON2( prev, on_data_ready, context, data, impulse )
+#define CALL_ON_PREV_ON_DATA_READY( context, data, hint )\
+    CALL_ON2( prev, on_data_ready, context, data, hint )
 
 // CLOSE
 #define CALL_ON_SELF_CLOSE( context )\
@@ -118,23 +118,25 @@ extern "C" {
 #define CALL_ON_PREV_ON_CLOSE( context )\
     CALL_ON( prev, on_close, context )
 
+// SETUP
+#define CALL_ON_SELF_SETUP( context, data, hint )\
+    CALL_ON2( self, setup, context, data, hint )
+
+#define CALL_ON_NEXT_SETUP( context, data, hint )\
+    CALL_ON2( next, setup, context, data, hint )
+
+#define CALL_ON_PREV_SETUP( context, data, hint )\
+    CALL_ON2( prev, setup, context, data, hint )
+
 // CONNECT
-#define CALL_ON_SELF_CONNECT( context, host, port )\
-    CALL_ON2( self, connect, context, host, port )
+#define CALL_ON_SELF_CONNECT( context, data, hint )\
+    CALL_ON2( self, connect, context, data, hint )
 
-#define CALL_ON_NEXT_CONNECT( context, host, port )\
-    CALL_ON2( next, connect, context, host, port )
+#define CALL_ON_NEXT_CONNECT( context, data, hint )\
+    CALL_ON2( next, connect, context, data, hint )
 
-#define CALL_ON_PREV_CONNECT( context, host, port )\
-    CALL_ON2( prev, connect, context, host, port )
-
-typedef enum
-{
-      FUNCTION_ID_ON_DATA_READY = 0
-    , FUNCTION_ID_DATA_READY
-    , FUNCTION_ID_ON_CLOSE
-    , FUNCTION_ID_CLOSE
-} layer_api_function_id_t;
+#define CALL_ON_PREV_CONNECT( context, data, hint )\
+    CALL_ON2( prev, connect, context, data, hint )
 
 #ifdef __cplusplus
 }
