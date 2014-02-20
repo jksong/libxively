@@ -53,14 +53,26 @@ layer_state_t dummy_io_layer_on_close( layer_connectivity_t* context )
     return LAYER_STATE_OK;
 }
 
-layer_t* connect_to_endpoint(
-      layer_t* layer
-    , const char* address
-    , const int port )
+layer_state_t dummy_io_layer_init(
+      layer_connectivity_t* context
+    , const void* data
+    , const layer_hint_t hint )
 {
-    XI_UNUSED( layer );
-    XI_UNUSED( address );
-    XI_UNUSED( port );
+    XI_UNUSED( context );
+    XI_UNUSED( data );
+    XI_UNUSED( hint );
 
-    return layer;
+    return LAYER_STATE_OK;
+}
+
+layer_state_t dummy_io_layer_connect(
+      layer_connectivity_t* context
+    , const void* data
+    , const layer_hint_t hint )
+{
+    XI_UNUSED( context );
+    XI_UNUSED( data );
+    XI_UNUSED( hint );
+
+    return LAYER_STATE_OK;
 }
