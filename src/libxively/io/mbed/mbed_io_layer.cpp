@@ -129,25 +129,25 @@ err_handling:
     return LAYER_STATE_ERROR;
 }
 
-
 layer_state_t mbed_io_layer_on_close( layer_connectivity_t* context )
 {
     return CALL_ON_NEXT_CLOSE( context->self );
 }
 
-layer_t* connect_to_endpoint(
-      layer_t* layer
-    , const char* address
-    , const int port )
+layer_state_t mbed_io_layer_init(
+      layer_connectivity_t* context
+    , const void* data
+    , const layer_hint_t hint )
 {
-    // variables
-    mbed_data_t* mbed_data = 0;
+    layer_t* layer          = context->self;
+    mbed_data_t* mbed_data  = 0;
 
     // allocation of the socket connector
-    TCPSocketConnection* socket_ptr = new TCPSocketConnection();
+    TCPSocketConnection* socket_ptr
+        = new TCPSocketConnection();
     XI_CHECK_MEMORY( socket_ptr );
 
-    // set the timeout for blocking operations
+    // set the timeout for non-blocking operations
     socket_ptr->set_blocking( false, xi_globals.network_timeout );
 
     // allocate memory for the mbed data specific structure
@@ -155,29 +155,13 @@ layer_t* connect_to_endpoint(
             xi_alloc( sizeof( mbed_data_t ) );
     XI_CHECK_MEMORY( mbed_data );
 
-    { // to prevent the skip initializtion warning
-        mbed_data->socket_ptr = socket_ptr;
+    mbed_data->socket_ptr = socket_ptr;
 
-        // assign the layer specific data
-        layer->user_data = ( void* ) mbed_data;
+    // assign the layer specific data
+    layer->user_data = ( void* ) mbed_data;
 
-        // try to connect
-        int s = mbed_data->socket_ptr->connect( address, port );
+    return LAYER_STATE_OK;
 
-        // check if not failed
-        if( s == -1 )
-        {
-            xi_set_err( XI_SOCKET_CONNECTION_ERROR );
-            goto err_handling;
-        }
-    }
-
-    // POSTCONDITIONS
-    assert( mbed_data->socket_ptr != 0 );
-
-    return layer;
-
-    // cleanup the memory
 err_handling:
     // safely destroy the object
     if ( mbed_data && mbed_data->socket_ptr )
@@ -185,9 +169,43 @@ err_handling:
         delete mbed_data->socket_ptr;
         mbed_data->socket_ptr = 0;
     }
+
     if( mbed_data ) { XI_SAFE_FREE( mbed_data ); }
 
-    return 0;
+    return LAYER_STATE_ERROR;
+
 }
 
+layer_state_t mbed_io_layer_connect (
+      layer_connectivity_t* context
+    , const void* data
+    , const layer_hint_t hint )
+{
+    layer_t* layer                          = context->self;
+    mbed_data_t* mbed_data                  = ( mbed_data_t* ) layer->user_data;
+    xi_connection_data_t* connection_data   = ( xi_connection_data_t* ) data;
+
+    // try to connect
+    int s = mbed_data->socket_ptr->connect(
+          connection_data->address
+        , connection_data->port );
+
+    // check if not failed
+    if( s == -1 )
+    {
+        xi_set_err( XI_SOCKET_CONNECTION_ERROR );
+        goto err_handling;
+    }
+
+err_handling:
+    // safely destroy the object
+    if ( mbed_data && mbed_data->socket_ptr )
+    {
+        delete mbed_data->socket_ptr;
+        mbed_data->socket_ptr = 0;
+    }
+
+    if( mbed_data ) { XI_SAFE_FREE( mbed_data ); }
+
+    return LAYER_STATE_ERROR;
 }
