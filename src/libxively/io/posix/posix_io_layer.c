@@ -249,6 +249,7 @@ layer_state_t posix_io_layer_connect( layer_connectivity_t* context, const void*
 
     if( connect( posix_data->socket_fd, ( struct sockaddr* ) &name, sizeof( struct sockaddr ) ) == -1 )
     {
+        xi_debug_format( "errno: %d", errno );
         xi_debug_logger( "Connecting to the endpoint [failed]" );
         xi_set_err( XI_SOCKET_CONNECTION_ERROR );
         goto err_handling;
