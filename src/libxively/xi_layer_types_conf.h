@@ -13,8 +13,8 @@ extern "C" {
 #define BEGIN_LAYER_TYPES_CONF() \
     const layer_type_t LAYER_TYPES[] = {
 
-#define LAYER_TYPE( type_id, data_ready, on_data_ready, close, on_close ) \
-    { type_id, { data_ready, on_data_ready, close, on_close } }
+#define LAYER_TYPE( type_id, data_ready, on_data_ready, close, on_close, connect ) \
+    { type_id, { data_ready, on_data_ready, close, on_close, connect } }
 
 #define END_LAYER_TYPES_CONF() \
     };

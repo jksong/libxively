@@ -365,6 +365,7 @@ void xi_delete_context( xi_context_t* context )
     XI_SAFE_FREE( context );
 }
 
+#ifndef XI_NOB_ENABLED
 const xi_response_t* xi_feed_get(
           xi_context_t* xi
         , xi_feed_t* feed )
@@ -734,13 +735,12 @@ extern const xi_response_t* xi_datapoint_delete_range(
 
     return ( ( csv_layer_data_t* ) input_layer->user_data )->response;
 }
-
-#ifdef XI_NOB_ENABLED
+#else
 extern const xi_context_t* xi_nob_feed_update(
          xi_context_t* xi
        , const xi_feed_t* value )
 {
-    layer_t* io_layer = connect_to_endpoint( xi->layer_chain.bottom, XI_HOST, XI_PORT );
+    layer_t* io_layer = init_layer( xi->layer_chain.bottom );
 
     if( io_layer == 0 )
     {
@@ -773,7 +773,7 @@ extern const xi_context_t* xi_nob_feed_get(
          xi_context_t* xi
        , xi_feed_t* value )
 {
-    layer_t* io_layer = connect_to_endpoint( xi->layer_chain.bottom, XI_HOST, XI_PORT );
+    layer_t* io_layer = init_layer( xi->layer_chain.bottom );
 
     if( io_layer == 0 )
     {
@@ -806,7 +806,7 @@ extern const xi_context_t* xi_nob_feed_get_all(
           xi_context_t* xi
         , xi_feed_t* value )
 {
-    layer_t* io_layer = connect_to_endpoint( xi->layer_chain.bottom, XI_HOST, XI_PORT );
+    layer_t* io_layer = init_layer( xi->layer_chain.bottom );
 
     if( io_layer == 0 )
     {
@@ -841,15 +841,15 @@ extern const xi_context_t* xi_nob_datastream_create(
        , const char * datastream_id
        , const xi_datapoint_t* value )
 {
-    XI_UNUSED( feed_id );
-
-    layer_t* io_layer = connect_to_endpoint( xi->layer_chain.bottom, XI_HOST, XI_PORT );
+    layer_t* io_layer = init_layer( xi->layer_chain.bottom );
 
     if( io_layer == 0 )
     {
         // we are in trouble
         return 0;
     }
+
+    XI_UNUSED( feed_id );
 
     // extract the input layer
     layer_t* input_layer = xi->layer_chain.top;
@@ -878,15 +878,15 @@ extern const xi_context_t* xi_nob_datastream_update(
        , const char * datastream_id
        , const xi_datapoint_t* value )
 {
-    XI_UNUSED( feed_id );
-
-    layer_t* io_layer = connect_to_endpoint( xi->layer_chain.bottom, XI_HOST, XI_PORT );
+    layer_t* io_layer = init_layer( xi->layer_chain.bottom );
 
     if( io_layer == 0 )
     {
         // we are in trouble
         return 0;
     }
+
+    XI_UNUSED( feed_id );
 
     // extract the input layer
     layer_t* input_layer = xi->layer_chain.top;
@@ -914,15 +914,15 @@ const xi_context_t* xi_nob_datastream_get(
          xi_context_t* xi, xi_feed_id_t feed_id
        , const char * datastream_id, xi_datapoint_t* dp )
 {
-    XI_UNUSED( feed_id );
-
-    layer_t* io_layer = connect_to_endpoint( xi->layer_chain.bottom, XI_HOST, XI_PORT );
+    layer_t* io_layer = init_layer( xi->layer_chain.bottom );
 
     if( io_layer == 0 )
     {
         // we are in trouble
         return 0;
     }
+
+    XI_UNUSED( feed_id );
 
     // extract the input layer
     layer_t* input_layer = xi->layer_chain.top;
@@ -950,15 +950,15 @@ const xi_context_t* xi_nob_datastream_delete(
          xi_context_t* xi, xi_feed_id_t feed_id
        , const char* datastream_id )
 {
-    XI_UNUSED( feed_id );
-
-    layer_t* io_layer = connect_to_endpoint( xi->layer_chain.bottom, XI_HOST, XI_PORT );
+    layer_t* io_layer = init_layer( xi->layer_chain.bottom );
 
     if( io_layer == 0 )
     {
         // we are in trouble
         return 0;
     }
+
+    XI_UNUSED( feed_id );
 
     // extract the input layer
     layer_t* input_layer = xi->layer_chain.top;
@@ -986,15 +986,15 @@ const xi_context_t* xi_nob_datapoint_delete(
        , const char * datastream_id
        , const xi_datapoint_t* dp )
 {
-    XI_UNUSED( feed_id );
-
-    layer_t* io_layer = connect_to_endpoint( xi->layer_chain.bottom, XI_HOST, XI_PORT );
+    layer_t* io_layer = init_layer( xi->layer_chain.bottom );
 
     if( io_layer == 0 )
     {
         // we are in trouble
         return 0;
     }
+
+    XI_UNUSED( feed_id );
 
     // extract the input layer
     layer_t* input_layer = xi->layer_chain.top;
@@ -1022,15 +1022,15 @@ const xi_context_t* xi_nob_datapoint_delete_range(
         xi_context_t* xi, xi_feed_id_t feed_id, const char * datastream_id
       , const xi_timestamp_t* start, const xi_timestamp_t* end )
 {
-    XI_UNUSED( feed_id );
-
-    layer_t* io_layer = connect_to_endpoint( xi->layer_chain.bottom, XI_HOST, XI_PORT );
+    layer_t* io_layer = init_layer( xi->layer_chain.bottom );
 
     if( io_layer == 0 )
     {
         // we are in trouble
         return 0;
     }
+
+    XI_UNUSED( feed_id );
 
     // extract the input layer
     layer_t* input_layer = xi->layer_chain.top;

@@ -4,6 +4,7 @@
 #include "nob_runner.h"
 #include "xi_layer_api.h"
 #include "xi_coroutine.h"
+#include "xi_connection_data.h"
 
 layer_state_t process_xively_nob_step( xi_context_t* xi )
 {
@@ -12,8 +13,21 @@ layer_state_t process_xively_nob_step( xi_context_t* xi )
 
     static int16_t state                = 0;
     static layer_state_t layer_state    = LAYER_STATE_OK;
+    xi_connection_data_t conn_data      = { XI_HOST, XI_PORT };
 
     BEGIN_CORO( state )
+
+    // connect to the endpoint
+    do
+    {
+        layer_state = CALL_ON_SELF_CONNECT( xi->layer_chain.bottom, ( void* ) &conn_data, LAYER_HINT_NONE );
+
+        if( layer_state != LAYER_STATE_OK )
+        {
+            YIELD( state, layer_state );
+        }
+
+    } while( layer_state != LAYER_STATE_OK );
 
     // write data to the endpoint
     do
@@ -22,19 +36,17 @@ layer_state_t process_xively_nob_step( xi_context_t* xi )
                       xi->layer_chain.top
                     , xi->input, LAYER_HINT_NONE );
 
-        if( layer_state == LAYER_STATE_NOT_READY )
+        if( layer_state != LAYER_STATE_OK )
         {
             YIELD( state, layer_state );
         }
 
-    } while( layer_state == LAYER_STATE_NOT_READY );
+    } while( layer_state != LAYER_STATE_OK );
 
     if( layer_state == LAYER_STATE_ERROR )
     {
         EXIT( state, layer_state);
     }
-
-    YIELD( state, LAYER_STATE_OK );
 
     // now read the data from the endpoint
     do
@@ -43,12 +55,12 @@ layer_state_t process_xively_nob_step( xi_context_t* xi )
                       xi->layer_chain.bottom
                     , 0, LAYER_HINT_NONE );
 
-        if( layer_state == LAYER_STATE_NOT_READY )
+        if( layer_state != LAYER_STATE_OK )
         {
             YIELD( state, layer_state );
         }
 
-    } while( layer_state == LAYER_STATE_NOT_READY );
+    } while( layer_state != LAYER_STATE_OK );
 
     EXIT( state, layer_state );
 

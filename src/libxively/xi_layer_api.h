@@ -118,6 +118,16 @@ extern "C" {
 #define CALL_ON_PREV_ON_CLOSE( context )\
     CALL_ON( prev, on_close, context )
 
+// CONNECT
+#define CALL_ON_SELF_CONNECT( context, host, port )\
+    CALL_ON2( self, connect, context, host, port )
+
+#define CALL_ON_NEXT_CONNECT( context, host, port )\
+    CALL_ON2( next, connect, context, host, port )
+
+#define CALL_ON_PREV_CONNECT( context, host, port )\
+    CALL_ON2( prev, connect, context, host, port )
+
 typedef enum
 {
       FUNCTION_ID_ON_DATA_READY = 0

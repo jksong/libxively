@@ -74,13 +74,13 @@ layer_state_t mbed_io_layer_on_data_ready(
     {
         memset( buffer->data_ptr, 0, buffer->data_size );
         buffer->real_size = mbed_data->socket_ptr->receive( buffer->data_ptr, buffer->data_size - 1 );
-        
+
         xi_debug_format( "received: %d", buffer->real_size );
-        
+
         buffer->data_ptr[ buffer->real_size ] = '\0'; // put guard
         buffer->curr_pos = 0;
         state = CALL_ON_NEXT_ON_DATA_READY( context->self, ( void* ) buffer, LAYER_HINT_MORE_DATA );
-    } while( state == LAYER_STATE_MORE_DATA );
+    } while( state == LAYER_STATE_WANT_READ );
 
     return LAYER_STATE_OK;
 }
@@ -93,7 +93,7 @@ layer_state_t mbed_io_layer_close(
         = ( mbed_data_t* ) context->self->user_data;
 
     xi_debug_logger( "closing socket..." );
-    
+
     // close the connection & the socket
     if( mbed_data->socket_ptr->close() == -1 )
     {
@@ -101,18 +101,18 @@ layer_state_t mbed_io_layer_close(
         xi_set_err( XI_SOCKET_CLOSE_ERROR );
         goto err_handling;
     }
-    
+
     // safely destroy the object
     if ( mbed_data && mbed_data->socket_ptr )
     {
         xi_debug_logger( "deleting socket..." );
-        
+
         delete mbed_data->socket_ptr;
         mbed_data->socket_ptr = 0;
     }
-    
-    if( mbed_data ) { XI_SAFE_FREE( mbed_data ); }    
-    
+
+    if( mbed_data ) { XI_SAFE_FREE( mbed_data ); }
+
     return LAYER_STATE_OK;
 
     // cleanup the memory
@@ -123,9 +123,9 @@ err_handling:
         delete mbed_data->socket_ptr;
         mbed_data->socket_ptr = 0;
     }
-    
+
     if( mbed_data ) { XI_SAFE_FREE( mbed_data ); }
-    
+
     return LAYER_STATE_ERROR;
 }
 

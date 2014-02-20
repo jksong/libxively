@@ -40,6 +40,18 @@ layer_state_t posix_asynch_io_layer_data_ready(
     {
         int len = write( posix_asynch_data->socket_fd, buffer->data_ptr, buffer->data_size );
 
+        if( len < 0 )
+        {
+            int errval = errno;
+            if( errval == EAGAIN ) // that can happen
+            {
+                return LAYER_STATE_WANT_WRITE;
+            }
+
+            xi_debug_printf( "error reading: errno = %d \n", errval );
+            return LAYER_STATE_ERROR;
+        }
+
         if( len < buffer->data_size )
         {
             return LAYER_STATE_ERROR;
@@ -84,7 +96,7 @@ layer_state_t posix_asynch_io_layer_on_data_ready(
         int errval = errno;
         if( errval == EAGAIN ) // that can happen
         {
-            return LAYER_STATE_NOT_READY;
+            return LAYER_STATE_WANT_READ;
         }
 
         xi_debug_printf( "error reading: errno = %d \n", errval );
@@ -96,11 +108,6 @@ layer_state_t posix_asynch_io_layer_on_data_ready(
     buffer->data_ptr[ buffer->real_size ] = '\0'; // put guard
     buffer->curr_pos = 0;
     state = CALL_ON_NEXT_ON_DATA_READY( context->self, ( void* ) buffer, LAYER_HINT_MORE_DATA );
-
-    if( state == LAYER_STATE_MORE_DATA )
-    {
-        return LAYER_STATE_NOT_READY;
-    }
 
     return state;
 }

@@ -22,8 +22,8 @@ typedef enum
     LAYER_STATE_OK = 0,     // everything went fine, the executor can process the buffer
     LAYER_STATE_FULL,       // the capacity of the buffer has been reached, so be carefull on parsing
     LAYER_STATE_TIMEOUT,    // timeout occured
-    LAYER_STATE_NOT_READY,  // the layer is not ready yet (should happen only in asynch mode when some of the sockets may be in EAGAIN state)
-    LAYER_STATE_MORE_DATA,  // may be used to get more data from other layers or used to trigger the read across the layers
+    LAYER_STATE_WANT_READ,  // to be more specific layer's can demand reading
+    LAYER_STATE_WANT_WRITE, // or writing
     LAYER_STATE_ERROR       // something went terribly wrong, most probably it's not possible to recover, please refer to the errno value
 } layer_state_t;
 
@@ -36,6 +36,7 @@ typedef enum
 
 typedef layer_state_t ( data_ready_t )      ( layer_connectivity_t* context, const void* data, const layer_hint_t hint );
 typedef layer_state_t ( on_data_ready_t )   ( layer_connectivity_t* context, const void* data, const layer_hint_t hint );
+typedef layer_state_t ( connect_t )         ( layer_connectivity_t* context, const void* data, const layer_hint_t hint );
 typedef layer_state_t ( close_t )           ( layer_connectivity_t* context );
 typedef layer_state_t ( on_close_t )        ( layer_connectivity_t* context );
 
@@ -69,6 +70,9 @@ typedef struct layer_interface
 
     // whenver the processing chain is going to be closed it's source is in the prev layer
     on_close_t          *on_close;
+
+    // whenever something want to connect the layer
+    connect_t           *connect;
 
 } layer_interface_t;
 

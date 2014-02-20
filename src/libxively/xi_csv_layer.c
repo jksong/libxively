@@ -146,8 +146,8 @@ signed char xi_stated_csv_decode_value(
     assert( source != 0 );
     assert( p != 0 );
 
-    // tmp 
-    char c = 0;   
+    // tmp
+    char c = 0;
     xi_char_type_t ct = XI_CHAR_UNKNOWN;
 
     // if not the first run jump into the proper label
@@ -330,7 +330,7 @@ const void* csv_layer_data_generator_feed(
     const union http_union_data_t* ld   = ( const union http_union_data_t* ) input;
     const xi_feed_t* feed               = ( const xi_feed_t* ) ld->xi_get_feed.feed;
     static unsigned char i              = 0;                                            // local global index required to be static cause used via the persistent for
-                                                                                        // 
+                                                                                        //
     static union http_union_data_t tmp_http_data;
 
     ENABLE_GENERATOR();
@@ -371,9 +371,9 @@ layer_state_t csv_layer_parse_datastream(
     XI_UNUSED( dp );
 
     // some tmp variables
-    signed char ret_state = 0;   
+    signed char ret_state = 0;
     static struct xi_tm gmtinfo;
-    
+
     // patterns
     const const_data_descriptor_t pattern1   = { XI_CSV_TIMESTAMP_PATTERN, strlen( XI_CSV_TIMESTAMP_PATTERN ), strlen( XI_CSV_TIMESTAMP_PATTERN ), 0 };
     void* pv1[]                              = {
@@ -384,7 +384,7 @@ layer_state_t csv_layer_parse_datastream(
         , ( void* ) &( gmtinfo.tm_min )
         , ( void* ) &( gmtinfo.tm_sec )
         , ( void* ) &( dp->timestamp.micro ) };
-        
+
     const const_data_descriptor_t pattern2   = { ",", 1, 1, 0 };
 
 
@@ -404,7 +404,7 @@ layer_state_t csv_layer_parse_datastream(
             if( ret_state == 0 )
             {
                 // need more data
-                YIELD( csv_layer_data->datapoint_decode_state, LAYER_STATE_MORE_DATA );
+                YIELD( csv_layer_data->datapoint_decode_state, LAYER_STATE_WANT_READ );
                 ret_state = 0;
                 continue;
             }
@@ -419,7 +419,7 @@ layer_state_t csv_layer_parse_datastream(
             if( ret_state == 0 )
             {
                 // need more data
-                YIELD( csv_layer_data->datapoint_decode_state, LAYER_STATE_MORE_DATA );
+                YIELD( csv_layer_data->datapoint_decode_state, LAYER_STATE_WANT_READ );
                 ret_state = 0;
                 continue;
             }
@@ -447,7 +447,7 @@ layer_state_t csv_layer_parse_datastream(
 
             if( ret_state == 0 )
             {
-                YIELD( csv_layer_data->datapoint_decode_state, LAYER_STATE_MORE_DATA )
+                YIELD( csv_layer_data->datapoint_decode_state, LAYER_STATE_WANT_READ )
                 continue;
             }
 
@@ -474,7 +474,7 @@ layer_state_t csv_layer_parse_feed(
     // some tmp variables
     signed char sscanf_state               = 0;
     layer_state_t state                    = LAYER_STATE_OK;
-    
+
     // patterns
     const char status_pattern1[]        = "%" XI_STR( XI_MAX_DATASTREAM_NAME ) "C,";
     const const_data_descriptor_t v1    = { status_pattern1, sizeof( status_pattern1 ) - 1, sizeof( status_pattern1 ) - 1, 0 };
@@ -502,7 +502,7 @@ layer_state_t csv_layer_parse_feed(
 
                 if( sscanf_state == 0 )
                 {
-                    YIELD( csv_layer_data->feed_decode_state, LAYER_STATE_MORE_DATA );
+                    YIELD( csv_layer_data->feed_decode_state, LAYER_STATE_WANT_READ );
                     sscanf_state = 0;
                     continue;
                 }
@@ -521,10 +521,10 @@ layer_state_t csv_layer_parse_feed(
             {
                 state = csv_layer_parse_datastream( csv_layer_data, data, hint, &( dp->datastreams[ dp->datastream_count ].datapoints[ 0 ] ) );
 
-                if( state == LAYER_STATE_MORE_DATA )
+                if( state == LAYER_STATE_WANT_READ )
                 {
-                    YIELD( csv_layer_data->feed_decode_state, LAYER_STATE_MORE_DATA );
-                    state = LAYER_STATE_MORE_DATA;
+                    YIELD( csv_layer_data->feed_decode_state, LAYER_STATE_WANT_READ );
+                    state = LAYER_STATE_WANT_READ;
                     continue;
                 }
                 else if( state == LAYER_STATE_ERROR )
@@ -532,7 +532,7 @@ layer_state_t csv_layer_parse_feed(
                     EXIT( csv_layer_data->feed_decode_state, LAYER_STATE_ERROR );
                 }
 
-            } while( state == LAYER_STATE_MORE_DATA );
+            } while( state == LAYER_STATE_WANT_READ );
 
             // update the counter values
             dp->datastreams[ dp->datastream_count ].datapoint_count     = 1;

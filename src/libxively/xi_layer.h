@@ -4,6 +4,8 @@
 #ifndef __XI_LAYER_H__
 #define __XI_LAYER_H__
 
+#include <stdint.h>
+
 #include "xi_layer_connectivity.h"
 #include "xi_layer_debug_info.h"
 #include "xi_layer_interface.h"
@@ -19,7 +21,7 @@ typedef struct layer
     layer_connectivity_t        layer_connection;
     layer_type_id_t             layer_type_id;
     void*                       user_data;
-    short                       layer_states[ 4 ];
+    int16_t                     layer_states[ 5 ];
 #ifdef XI_DEBUG_LAYER_API
     layer_debug_info_t          debug_info;
 #endif

@@ -311,7 +311,9 @@ extern xi_context_t* xi_create_context(
  */
 extern void xi_delete_context( xi_context_t* context );
 
+#define XI_NOB_ENABLED 1
 
+#ifndef XI_NOB_ENABLED
 /**
  * \brief   Update Xively feed
  */
@@ -385,12 +387,10 @@ extern const xi_response_t* xi_datapoint_delete_range(
           const xi_context_t* xi, xi_feed_id_t feed_id, const char * datastream_id
         , const xi_timestamp_t* start, const xi_timestamp_t* end );
 
+#else
 //-----------------------------------------------------------------------
 // MAIN LIBRARY NON BLOCKING FUNCTIONS
 //-----------------------------------------------------------------------
-
-#ifdef XI_NOB_ENABLED
-
 /**
  * \brief   Update Xively feed
  */
