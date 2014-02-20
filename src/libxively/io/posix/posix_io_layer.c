@@ -25,6 +25,7 @@
 
 #include "xi_layer_api.h"
 #include "xi_common.h"
+#include "xi_connection_data.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -164,22 +165,29 @@ err_handling:
     return LAYER_STATE_ERROR;
 }
 
-layer_t* connect_to_endpoint(
-      layer_t* layer
-    , const char* address
-    , const int port )
+// here we are going to allocate the space for the posix data, and we are going to create the socket
+// and store it in the data module so it's we can use it later on
+layer_state_t posix_io_layer_init(
+      layer_connectivity_t* context
+    , const void* data
+    , const layer_hint_t hint )
 {
+    // PRECONDITIONS
+    assert( context != 0 );
+    assert( data != 0 );
 
-    xi_debug_format( "Connecting layer [%d] to the endpoint", layer->layer_type_id );
+    xi_debug_logger( "[posix_io_layer_init]" );
 
-    posix_data_t* posix_data                    = xi_alloc( sizeof( posix_data_t ) );
+    layer_t* layer              = ( layer_t* ) context->self;
+    posix_data_t* posix_data    = xi_alloc( sizeof( posix_data_t ) );
 
     XI_CHECK_MEMORY( posix_data );
 
-    layer->user_data                            = ( void* ) posix_data;
+    layer->user_data            = ( void* ) posix_data;
 
     xi_debug_logger( "Creating socket..." );
-    posix_data->socket_fd                       = socket( AF_INET, SOCK_STREAM, 0 );
+
+    posix_data->socket_fd       = socket( AF_INET, SOCK_STREAM, 0 );
 
     if( posix_data->socket_fd == -1 )
     {
@@ -190,6 +198,28 @@ layer_t* connect_to_endpoint(
 
     xi_debug_logger( "Socket creation [ok]" );
 
+    // POSTCONDITIONS
+    assert( layer->user_data != 0 );
+    assert( posix_data->socket_fd != -1 );
+
+    return LAYER_STATE_OK;
+
+err_handling:
+    // cleanup the memory
+    if( posix_data )        { close( posix_data->socket_fd ); }
+    if( layer->user_data )  { XI_SAFE_FREE( layer->user_data ); }
+
+    return LAYER_STATE_ERROR;
+}
+
+layer_state_t posix_io_layer_connect( layer_connectivity_t* context, const void* data, const layer_hint_t hint )
+{
+    xi_connection_data_t* connection_data   = ( xi_connection_data_t* ) data;
+    layer_t* layer                          = ( layer_t* ) context->self;
+    posix_data_t* posix_data                = ( posix_data_t* ) layer->user_data;
+
+    xi_debug_format( "Connecting layer [%d] to the endpoint", layer->layer_type_id );
+
      // socket specific data
     struct sockaddr_in name;
     struct hostent* hostinfo;
@@ -197,7 +227,7 @@ layer_t* connect_to_endpoint(
     xi_debug_logger( "Getting host by name..." );
 
     // get the hostaddress
-    hostinfo = gethostbyname( address );
+    hostinfo = gethostbyname( connection_data->address );
 
     // if null it means that the address has not been founded
     if( hostinfo == NULL )
@@ -213,7 +243,7 @@ layer_t* connect_to_endpoint(
     memset( &name, 0, sizeof( struct sockaddr_in ) );
     name.sin_family     = AF_INET;
     name.sin_addr       = *( ( struct in_addr* ) hostinfo->h_addr );
-    name.sin_port       = htons( port );
+    name.sin_port       = htons( connection_data->port );
 
     xi_debug_logger( "Connecting to the endpoint..." );
 
@@ -226,18 +256,14 @@ layer_t* connect_to_endpoint(
 
     xi_debug_logger( "Connecting to the endpoint [ok]" );
 
-    // POSTCONDITIONS
-    assert( layer != 0 );
-    assert( posix_data->socket_fd != -1 );
-
-    return layer;
+    return LAYER_STATE_OK;
 
 err_handling:
     // cleanup the memory
-    if( posix_data ) { close( posix_data->socket_fd ); }
-    if( layer->user_data ) { XI_SAFE_FREE( layer->user_data ); }
+    if( posix_data )        { close( posix_data->socket_fd ); }
+    if( layer->user_data )  { XI_SAFE_FREE( layer->user_data ); }
 
-    return 0;
+    return LAYER_STATE_ERROR;
 }
 
 #ifdef __cplusplus

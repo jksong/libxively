@@ -32,8 +32,6 @@ layer_state_t posix_asynch_io_layer_data_ready(
     posix_asynch_data_t* posix_asynch_data  = ( posix_asynch_data_t* ) context->self->user_data;
     const const_data_descriptor_t* buffer   = ( const const_data_descriptor_t* ) data;
 
-    xi_debug_printf( "%s", buffer->data_ptr );
-
     XI_UNUSED( hint );
 
     if( buffer != 0 && buffer->data_size > 0 )
@@ -58,7 +56,7 @@ layer_state_t posix_asynch_io_layer_data_ready(
         }
     }
 
-    return LAYER_STATE_NOT_READY;
+    return hint == LAYER_HINT_MORE_DATA ? LAYER_STATE_WANT_WRITE : LAYER_STATE_OK;
 }
 
 layer_state_t posix_asynch_io_layer_on_data_ready(
