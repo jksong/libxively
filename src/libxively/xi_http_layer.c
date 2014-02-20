@@ -577,7 +577,7 @@ static inline layer_state_t http_layer_data_ready_gen(
     // generator state
     static short gstate         = 0;
     static short local_state    = 0;
-    static layer_state_t state  = LAYER_STATE_WANT_WRITE;
+    static layer_state_t state  = LAYER_STATE_OK;
 
     BEGIN_CORO( local_state )
 
@@ -586,7 +586,7 @@ static inline layer_state_t http_layer_data_ready_gen(
         // send the data through the next layer
         while( gstate != 1 )
         {
-            while( state != LAYER_STATE_OK )
+            while( state == LAYER_STATE_OK && gstate != 1 )
             {
                 const const_data_descriptor_t* ret
                         = ( const const_data_descriptor_t* ) ( *gen )( input, &gstate );
@@ -594,16 +594,16 @@ static inline layer_state_t http_layer_data_ready_gen(
                 state = CALL_ON_PREV_DATA_READY(
                               context->self
                             , ( const void* ) ret
-                            , ( gstate != 1 ) ? LAYER_HINT_MORE_DATA : LAYER_HINT_NONE );
+                            , LAYER_HINT_NONE );
+            }
 
-                if( state != LAYER_STATE_OK )
-                {
-                    YIELD( local_state, state );
-                }
+            if( state != LAYER_STATE_OK )
+            {
+                YIELD( local_state, state );
             }
         }
 
-        EXIT( local_state, LAYER_STATE_OK )
+        EXIT( local_state, LAYER_STATE_OK );
 
     END_CORO()
 }
@@ -678,8 +678,8 @@ layer_state_t http_layer_on_data_ready(
     , const void* data
     , const layer_hint_t hint )
 {
-
     XI_UNUSED( hint );
+    static uint16_t cs = 0; // coroutine state
 
     // unpack http_layer_data so unpack it
     http_layer_data_t* http_layer_data = ( http_layer_data_t* ) context->self->user_data;
@@ -731,7 +731,7 @@ layer_state_t http_layer_on_data_ready(
     };
 
 
-    BEGIN_CORO( context->self->layer_states[ FUNCTION_ID_ON_DATA_READY ] )
+    BEGIN_CORO( cs )
 
     memset( xi_stated_state, 0, sizeof( xi_stated_sscanf_state_t ) );
 
@@ -751,14 +751,14 @@ layer_state_t http_layer_on_data_ready(
 
                 if( sscanf_state == 0 )
                 {
-                    YIELD( context->self->layer_states[ FUNCTION_ID_ON_DATA_READY ], LAYER_STATE_WANT_READ )
+                    YIELD( cs, LAYER_STATE_WANT_READ )
                     continue;
                 }
             }
 
             if( sscanf_state == -1 )
             {
-                EXIT( context->self->layer_states[ FUNCTION_ID_ON_DATA_READY ], LAYER_STATE_ERROR )
+                EXIT( cs, LAYER_STATE_ERROR )
             }
         }
     }
@@ -785,7 +785,7 @@ layer_state_t http_layer_on_data_ready(
 
                 if( sscanf_state == 0 )
                 {
-                    YIELD( context->self->layer_states[ FUNCTION_ID_ON_DATA_READY ], LAYER_STATE_WANT_READ )
+                    YIELD( cs, LAYER_STATE_WANT_READ )
                     continue;
                 }
             }
@@ -804,7 +804,7 @@ layer_state_t http_layer_on_data_ready(
 
                     if( sscanf_state == -1 )
                     {
-                        EXIT( context->self->layer_states[ FUNCTION_ID_ON_DATA_READY ], LAYER_STATE_ERROR )
+                        EXIT( cs, LAYER_STATE_ERROR )
                     }
                 }
 
@@ -847,7 +847,7 @@ layer_state_t http_layer_on_data_ready(
 
             if( sscanf_state == 0 )
             {
-                YIELD( context->self->layer_states[ FUNCTION_ID_ON_DATA_READY ], LAYER_STATE_WANT_READ )
+                YIELD( cs, LAYER_STATE_WANT_READ )
                 continue;
             }
         }
@@ -857,7 +857,7 @@ layer_state_t http_layer_on_data_ready(
     {
         xi_debug_logger( "No double \\r\\n" );
 
-        EXIT( context->self->layer_states[ FUNCTION_ID_ON_DATA_READY ], LAYER_STATE_ERROR )
+        EXIT( cs, LAYER_STATE_ERROR )
     }
 
     // STAGE 04 reading payload
@@ -884,7 +884,7 @@ layer_state_t http_layer_on_data_ready(
 
                 if( state == LAYER_STATE_WANT_READ && http_layer_data->counter < http_layer_data->content_length )
                 {
-                    YIELD( context->self->layer_states[ FUNCTION_ID_ON_DATA_READY ], LAYER_STATE_WANT_READ );
+                    YIELD( cs, LAYER_STATE_WANT_READ );
                 }
             }
             else
@@ -899,7 +899,7 @@ layer_state_t http_layer_on_data_ready(
 
                 if( sscanf_state == 0 && http_layer_data->counter < http_layer_data->content_length )
                 {
-                    YIELD( context->self->layer_states[ FUNCTION_ID_ON_DATA_READY ], LAYER_STATE_WANT_READ );
+                    YIELD( cs, LAYER_STATE_WANT_READ );
                 }
             }
         }
@@ -907,10 +907,10 @@ layer_state_t http_layer_on_data_ready(
 
     if( sscanf_state == -1 )
     {
-        EXIT( context->self->layer_states[ FUNCTION_ID_ON_DATA_READY ], LAYER_STATE_ERROR )
+        EXIT( cs, LAYER_STATE_ERROR )
     }
 
-    EXIT( context->self->layer_states[ FUNCTION_ID_ON_DATA_READY ], LAYER_STATE_OK )
+    EXIT( cs, LAYER_STATE_OK )
 
     END_CORO()
 }

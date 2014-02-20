@@ -118,15 +118,15 @@ extern "C" {
 #define CALL_ON_PREV_ON_CLOSE( context )\
     CALL_ON( prev, on_close, context )
 
-// SETUP
-#define CALL_ON_SELF_SETUP( context, data, hint )\
-    CALL_ON2( self, setup, context, data, hint )
+// INIT
+#define CALL_ON_SELF_INIT( context, data, hint )\
+    CALL_ON2( self, init, context, data, hint )
 
-#define CALL_ON_NEXT_SETUP( context, data, hint )\
-    CALL_ON2( next, setup, context, data, hint )
+#define CALL_ON_NEXT_INIT( context, data, hint )\
+    CALL_ON2( next, init, context, data, hint )
 
-#define CALL_ON_PREV_SETUP( context, data, hint )\
-    CALL_ON2( prev, setup, context, data, hint )
+#define CALL_ON_PREV_INIT( context, data, hint )\
+    CALL_ON2( prev, init, context, data, hint )
 
 // CONNECT
 #define CALL_ON_SELF_CONNECT( context, data, hint )\

@@ -311,7 +311,9 @@ extern xi_context_t* xi_create_context(
  */
 extern void xi_delete_context( xi_context_t* context );
 
+#if 0
 #define XI_NOB_ENABLED 1
+#endif
 
 #ifndef XI_NOB_ENABLED
 /**

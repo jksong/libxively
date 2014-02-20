@@ -15,6 +15,7 @@
 #endif
 #include <string.h>
 #include <stdint.h>
+#include <errno.h>
 
 #include "posix_io_layer.h"
 #include "posix_data.h"
@@ -172,9 +173,11 @@ layer_state_t posix_io_layer_init(
     , const void* data
     , const layer_hint_t hint )
 {
+    XI_UNUSED( hint );
+    XI_UNUSED( data );
+
     // PRECONDITIONS
     assert( context != 0 );
-    assert( data != 0 );
 
     xi_debug_logger( "[posix_io_layer_init]" );
 
@@ -214,6 +217,11 @@ err_handling:
 
 layer_state_t posix_io_layer_connect( layer_connectivity_t* context, const void* data, const layer_hint_t hint )
 {
+    XI_UNUSED( hint );
+
+    // PRECONDITIONS
+    assert( context != 0 );
+
     xi_connection_data_t* connection_data   = ( xi_connection_data_t* ) data;
     layer_t* layer                          = ( layer_t* ) context->self;
     posix_data_t* posix_data                = ( posix_data_t* ) layer->user_data;

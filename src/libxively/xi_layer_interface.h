@@ -76,6 +76,7 @@ typedef struct layer_interface
 
     // whenever we want to connect the layer
     connect_t           *connect;
+
 } layer_interface_t;
 
 #ifdef __cplusplus
