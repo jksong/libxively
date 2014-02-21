@@ -74,6 +74,10 @@ ifeq ($(XI_NOB_ENABLED),true)
   XI_CONFIG += XI_NOB_ENABLED
 endif
 
+ifeq ($(XI_MQTT_ENABLED),true)
+  XI_CONFIG += XI_MQTT_ENABLED
+endif
+
 ifndef XI_USER_CONFIG
   XI_CFLAGS += $(foreach constant,$(XI_CONFIG),-D$(constant))
 else
@@ -93,7 +97,6 @@ XI ?= $(XI_OBJDIR)/libxively.a
 
 XI_OBJECTS = $(filter-out $(XI_SOURCES), $(XI_SOURCES:.c=.o) $(XI_SOURCES:.cpp=.o))
 XI_DEPENDS = $(filter-out $(XI_SOURCES), $(XI_SOURCES:.c=.d) $(XI_SOURCES:.cpp=.d))
-
 
 XI_OBJS = $(addprefix $(XI_OBJDIR)/,$(XI_OBJECTS))
 XI_DEPS = $(addprefix $(XI_OBJDIR)/,$(XI_DEPENDS))
