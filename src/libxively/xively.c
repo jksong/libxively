@@ -28,6 +28,8 @@
 #include "xi_http_layer.h"
 #include "xi_http_layer_data.h"
 #include "xi_csv_layer.h"
+#include "xi_mqtt_layer.h"
+#include "xi_mqtt_layer_data.h"
 #include "xi_connection_data.h"
 
 #ifdef __cplusplus
@@ -187,6 +189,7 @@ enum LAYERS_ID
       IO_LAYER = 0
     , HTTP_LAYER
     , CSV_LAYER
+    , MQTT_LAYER
 };
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -200,7 +203,15 @@ DEFINE_CONNECTION_SCHEME( CONNECTION_SCHEME_1, CONNECTION_SCHEME_1_DATA );
     #include "posix_io_layer.h"
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
+    #ifdef XI_MQTT_ENABLED
+    BEGIN_LAYER_TYPES_CONF()
+          LAYER_TYPE( IO_LAYER, &posix_io_layer_data_ready, &posix_io_layer_on_data_ready
+                                , &posix_io_layer_close, &posix_io_layer_on_close
+                                , &posix_io_layer_init, &posix_io_layer_connect )
+        , LAYER_TYPE( MQTT_LAYER, 0, 0
+                                , &mqtt_layer_close, &mqtt_layer_on_close, &init_mqtt_layer, 0 )
+    END_LAYER_TYPES_CONF()
+    #else
     BEGIN_LAYER_TYPES_CONF()
           LAYER_TYPE( IO_LAYER, &posix_io_layer_data_ready, &posix_io_layer_on_data_ready
                                 , &posix_io_layer_close, &posix_io_layer_on_close
@@ -210,6 +221,7 @@ DEFINE_CONNECTION_SCHEME( CONNECTION_SCHEME_1, CONNECTION_SCHEME_1_DATA );
         , LAYER_TYPE( CSV_LAYER, &csv_layer_data_ready, &csv_layer_on_data_ready
                             , &csv_layer_close, &csv_layer_on_close, 0, 0 )
     END_LAYER_TYPES_CONF()
+    #endif
 
 #elif XI_IO_LAYER == XI_IO_DUMMY
     // dummy io layer
