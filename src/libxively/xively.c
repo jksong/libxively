@@ -219,11 +219,12 @@ DEFINE_CONNECTION_SCHEME( CONNECTION_SCHEME_1, CONNECTION_SCHEME_1_DATA );
 
     BEGIN_LAYER_TYPES_CONF()
           LAYER_TYPE( IO_LAYER, &dummy_io_layer_data_ready, &dummy_io_layer_on_data_ready
-                              , &dummy_io_layer_close, &dummy_io_layer_on_close )
+                              , &dummy_io_layer_close, &dummy_io_layer_on_close
+                              , &dummy_io_layer_init, &dummy_io_layer_connect )
         , LAYER_TYPE( HTTP_LAYER, &http_layer_data_ready, &http_layer_on_data_ready
-                                , &http_layer_close, &http_layer_on_close )
+                                , &http_layer_close, &http_layer_on_close, 0, 0 )
         , LAYER_TYPE( CSV_LAYER, &csv_layer_data_ready, &csv_layer_on_data_ready
-                            , &csv_layer_close, &csv_layer_on_close )
+                            , &csv_layer_close, &csv_layer_on_close, 0, 0 )
     END_LAYER_TYPES_CONF()
 
 #elif XI_IO_LAYER == XI_IO_MBED
@@ -249,11 +250,12 @@ DEFINE_CONNECTION_SCHEME( CONNECTION_SCHEME_1, CONNECTION_SCHEME_1_DATA );
 
     BEGIN_LAYER_TYPES_CONF()
           LAYER_TYPE( IO_LAYER, &posix_asynch_io_layer_data_ready, &posix_asynch_io_layer_on_data_ready
-                              , &posix_asynch_io_layer_close, &posix_asynch_io_layer_on_close )
+                              , &posix_asynch_io_layer_close, &posix_asynch_io_layer_on_close
+                              , &posix_asynch_io_layer_init, &posix_asynch_io_layer_connect )
         , LAYER_TYPE( HTTP_LAYER, &http_layer_data_ready, &http_layer_on_data_ready
-                                , &http_layer_close, &http_layer_on_close )
+                                , &http_layer_close, &http_layer_on_close, 0, 0 )
         , LAYER_TYPE( CSV_LAYER, &csv_layer_data_ready, &csv_layer_on_data_ready
-                            , &csv_layer_close, &csv_layer_on_close )
+                            , &csv_layer_close, &csv_layer_on_close, 0, 0 )
     END_LAYER_TYPES_CONF()
 #endif
 
@@ -796,16 +798,15 @@ extern const xi_context_t* xi_nob_feed_update(
          xi_context_t* xi
        , const xi_feed_t* value )
 {
-    layer_t* io_layer = init_layer( xi->layer_chain.bottom );
-
-    if( io_layer == 0 )
-    {
-        // we are in trouble
-        return 0;
-    }
+    // we shall need it later
+    layer_state_t state = LAYER_STATE_OK;
 
     // extract the input layer
-    layer_t* input_layer = xi->layer_chain.top;
+    layer_t* input_layer    = xi->layer_chain.top;
+    layer_t* io_layer       = xi->layer_chain.bottom;
+
+    state = CALL_ON_SELF_INIT( io_layer, 0, LAYER_HINT_NONE );
+    if( state != LAYER_STATE_OK ) { return 0; }
 
     // clean the response before writing to it
     memset( ( ( csv_layer_data_t* ) input_layer->user_data )->response, 0, sizeof( xi_response_t ) );
@@ -829,17 +830,14 @@ extern const xi_context_t* xi_nob_feed_get(
          xi_context_t* xi
        , xi_feed_t* value )
 {
-    layer_t* io_layer = init_layer( xi->layer_chain.bottom );
-
-    if( io_layer == 0 )
-    {
-        // we are in trouble
-        return 0;
-    }
+    layer_state_t state = LAYER_STATE_OK;
 
     // extract the input layer
-    layer_t* input_layer = xi->layer_chain.top;
+    layer_t* input_layer    = xi->layer_chain.top;
+    layer_t* io_layer       = xi->layer_chain.bottom;
 
+    state = CALL_ON_SELF_INIT( io_layer, 0, LAYER_HINT_NONE );
+    if( state != LAYER_STATE_OK ) { return 0; }
     // clean the response before writing to it
     memset( ( ( csv_layer_data_t* ) input_layer->user_data )->response, 0, sizeof( xi_response_t ) );
 
@@ -862,16 +860,14 @@ extern const xi_context_t* xi_nob_feed_get_all(
           xi_context_t* xi
         , xi_feed_t* value )
 {
-    layer_t* io_layer = init_layer( xi->layer_chain.bottom );
-
-    if( io_layer == 0 )
-    {
-        // we are in trouble
-        return 0;
-    }
+    layer_state_t state = LAYER_STATE_OK;
 
     // extract the input layer
-    layer_t* input_layer = xi->layer_chain.top;
+    layer_t* input_layer    = xi->layer_chain.top;
+    layer_t* io_layer       = xi->layer_chain.bottom;
+
+    state = CALL_ON_SELF_INIT( io_layer, 0, LAYER_HINT_NONE );
+    if( state != LAYER_STATE_OK ) { return 0; }
 
     // clean the response before writing to it
     memset( ( ( csv_layer_data_t* ) input_layer->user_data )->response, 0, sizeof( xi_response_t ) );
@@ -897,18 +893,16 @@ extern const xi_context_t* xi_nob_datastream_create(
        , const char * datastream_id
        , const xi_datapoint_t* value )
 {
-    layer_t* io_layer = init_layer( xi->layer_chain.bottom );
-
-    if( io_layer == 0 )
-    {
-        // we are in trouble
-        return 0;
-    }
-
     XI_UNUSED( feed_id );
 
+    layer_state_t state = LAYER_STATE_OK;
+
     // extract the input layer
-    layer_t* input_layer = xi->layer_chain.top;
+    layer_t* input_layer    = xi->layer_chain.top;
+    layer_t* io_layer       = xi->layer_chain.bottom;
+
+    state = CALL_ON_SELF_INIT( io_layer, 0, LAYER_HINT_NONE );
+    if( state != LAYER_STATE_OK ) { return 0; }
 
     // clean the response before writing to it
     memset( ( ( csv_layer_data_t* ) input_layer->user_data )->response, 0, sizeof( xi_response_t ) );
@@ -934,18 +928,16 @@ extern const xi_context_t* xi_nob_datastream_update(
        , const char * datastream_id
        , const xi_datapoint_t* value )
 {
-    layer_t* io_layer = init_layer( xi->layer_chain.bottom );
-
-    if( io_layer == 0 )
-    {
-        // we are in trouble
-        return 0;
-    }
-
     XI_UNUSED( feed_id );
 
+    layer_state_t state = LAYER_STATE_OK;
+
     // extract the input layer
-    layer_t* input_layer = xi->layer_chain.top;
+    layer_t* input_layer    = xi->layer_chain.top;
+    layer_t* io_layer       = xi->layer_chain.bottom;
+
+    state = CALL_ON_SELF_INIT( io_layer, 0, LAYER_HINT_NONE );
+    if( state != LAYER_STATE_OK ) { return 0; }
 
     // clean the response before writing to it
     memset( ( ( csv_layer_data_t* ) input_layer->user_data )->response, 0, sizeof( xi_response_t ) );
@@ -970,18 +962,16 @@ const xi_context_t* xi_nob_datastream_get(
          xi_context_t* xi, xi_feed_id_t feed_id
        , const char * datastream_id, xi_datapoint_t* dp )
 {
-    layer_t* io_layer = init_layer( xi->layer_chain.bottom );
-
-    if( io_layer == 0 )
-    {
-        // we are in trouble
-        return 0;
-    }
-
     XI_UNUSED( feed_id );
 
+    layer_state_t state = LAYER_STATE_OK;
+
     // extract the input layer
-    layer_t* input_layer = xi->layer_chain.top;
+    layer_t* input_layer    = xi->layer_chain.top;
+    layer_t* io_layer       = xi->layer_chain.bottom;
+
+    state = CALL_ON_SELF_INIT( io_layer, 0, LAYER_HINT_NONE );
+    if( state != LAYER_STATE_OK ) { return 0; }
 
     // clean the response before writing to it
     memset( ( ( csv_layer_data_t* ) input_layer->user_data )->response, 0, sizeof( xi_response_t ) );
@@ -1006,18 +996,16 @@ const xi_context_t* xi_nob_datastream_delete(
          xi_context_t* xi, xi_feed_id_t feed_id
        , const char* datastream_id )
 {
-    layer_t* io_layer = init_layer( xi->layer_chain.bottom );
-
-    if( io_layer == 0 )
-    {
-        // we are in trouble
-        return 0;
-    }
-
     XI_UNUSED( feed_id );
 
+    layer_state_t state = LAYER_STATE_OK;
+
     // extract the input layer
-    layer_t* input_layer = xi->layer_chain.top;
+    layer_t* input_layer    = xi->layer_chain.top;
+    layer_t* io_layer       = xi->layer_chain.bottom;
+
+    state = CALL_ON_SELF_INIT( io_layer, 0, LAYER_HINT_NONE );
+    if( state != LAYER_STATE_OK ) { return 0; }
 
     // clean the response before writing to it
     memset( ( ( csv_layer_data_t* ) input_layer->user_data )->response, 0, sizeof( xi_response_t ) );
@@ -1042,18 +1030,16 @@ const xi_context_t* xi_nob_datapoint_delete(
        , const char * datastream_id
        , const xi_datapoint_t* dp )
 {
-    layer_t* io_layer = init_layer( xi->layer_chain.bottom );
-
-    if( io_layer == 0 )
-    {
-        // we are in trouble
-        return 0;
-    }
-
     XI_UNUSED( feed_id );
 
+    layer_state_t state = LAYER_STATE_OK;
+
     // extract the input layer
-    layer_t* input_layer = xi->layer_chain.top;
+    layer_t* input_layer    = xi->layer_chain.top;
+    layer_t* io_layer       = xi->layer_chain.bottom;
+
+    state = CALL_ON_SELF_INIT( io_layer, 0, LAYER_HINT_NONE );
+    if( state != LAYER_STATE_OK ) { return 0; }
 
     // clean the response before writing to it
     memset( ( ( csv_layer_data_t* ) input_layer->user_data )->response, 0, sizeof( xi_response_t ) );
@@ -1078,18 +1064,16 @@ const xi_context_t* xi_nob_datapoint_delete_range(
         xi_context_t* xi, xi_feed_id_t feed_id, const char * datastream_id
       , const xi_timestamp_t* start, const xi_timestamp_t* end )
 {
-    layer_t* io_layer = init_layer( xi->layer_chain.bottom );
-
-    if( io_layer == 0 )
-    {
-        // we are in trouble
-        return 0;
-    }
-
     XI_UNUSED( feed_id );
 
+    layer_state_t state = LAYER_STATE_OK;
+
     // extract the input layer
-    layer_t* input_layer = xi->layer_chain.top;
+    layer_t* input_layer    = xi->layer_chain.top;
+    layer_t* io_layer       = xi->layer_chain.bottom;
+
+    state = CALL_ON_SELF_INIT( io_layer, 0, LAYER_HINT_NONE );
+    if( state != LAYER_STATE_OK ) { return 0; }
 
     // clean the response before writing to it
     memset( ( ( csv_layer_data_t* ) input_layer->user_data )->response, 0, sizeof( xi_response_t ) );
