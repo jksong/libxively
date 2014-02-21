@@ -24,12 +24,12 @@ layer_state_t posix_asynch_io_layer_close(
 layer_state_t posix_asynch_io_layer_on_close(
     layer_connectivity_t* context );
 
-layer_state_t posix_asynch_layer_init(
+layer_state_t posix_asynch_io_layer_init(
       layer_connectivity_t* context
     , const void* data
     , const layer_hint_t hint );
 
-layer_state_t posix_asynch_layer_connect(
+layer_state_t posix_asynch_io_layer_connect(
       layer_connectivity_t* context
     , const void* data
     , const layer_hint_t hint );

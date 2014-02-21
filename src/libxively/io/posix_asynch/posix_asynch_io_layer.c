@@ -151,14 +151,16 @@ err_handling:
     return ret;
 }
 
-layer_state_t posix_asynch_layer_init(
+layer_state_t posix_asynch_io_layer_init(
       layer_connectivity_t* context
     , const void* data
     , const layer_hint_t hint )
 {
+    XI_UNUSED( hint );
+    XI_UNUSED( data );
+
     // PRECONDITIONS
     assert( context != 0 );
-    assert( data != 0 );
 
     xi_debug_logger( "[posix_io_layer_init]" );
 
@@ -214,11 +216,13 @@ err_handling:
     return LAYER_STATE_ERROR;
 }
 
-layer_state_t posix_asynch_layer_connect(
+layer_state_t posix_asynch_io_layer_connect(
       layer_connectivity_t* context
     , const void* data
     , const layer_hint_t hint )
 {
+    XI_UNUSED( hint );
+
     static uint16_t cs = 0; // local coroutine prereserved state
 
     xi_connection_data_t* connection_data   = ( xi_connection_data_t* ) data;
