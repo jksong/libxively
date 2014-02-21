@@ -1,28 +1,24 @@
 LIBXIVELY := $(shell git rev-parse --show-toplevel)
 include $(LIBXIVELY)/Makefile.include
 
-XI_LAYER_DIRS := io/$(XI_IO_LAYER)
-
-ifeq ($(XI_NOB_ENABLED),true)
-    XI_LAYER_DIRS += nob
-endif
-
-XI_CFLAGS += -I./ \
-	$(foreach layerdir,$(XI_LAYER_DIRS),-I./$(layerdir))
-
 XI_SOURCES = $(wildcard *.c) \
 	$(wildcard io/$(XI_IO_LAYER)/*.c) \
 	$(wildcard io/$(XI_IO_LAYER)/*.cpp)
 
+XI_LAYER_DIRS := io/$(XI_IO_LAYER)
+
 ifeq ($(XI_NOB_ENABLED),true)
+    XI_LAYER_DIRS += nob
     XI_SOURCES += $(wildcard nob/*.c)
 endif
 
 ifeq ($(XI_MQTT_ENABLED),true)
-    XI_SOURCES += $(wildcard $(LIBXIVELY)/src/import/mqtt-codec/src/*.c)
-    XI_CFLAGS += -DXI_MQTT_ENABLED \
-		 -I$(LIBXIVELY)/src/import/mqtt-codec/src/
+    XI_SOURCES += $(wildcard mqtt/codec/*.c)
+    XI_LAYER_DIRS += mqtt mqtt/codec
 endif
+
+XI_CFLAGS += -I./ \
+	$(foreach layerdir,$(XI_LAYER_DIRS),-I./$(layerdir))
 
 all: $(XI)
 
