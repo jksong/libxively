@@ -13,7 +13,7 @@ ifeq ($(XI_NOB_ENABLED),true)
 endif
 
 ifeq ($(XI_MQTT_ENABLED),true)
-    XI_SOURCES += $(wildcard mqtt/codec/*.c)
+    XI_SOURCES += $(wildcard mqtt/*.c mqtt/codec/*.c)
     XI_LAYER_DIRS += mqtt mqtt/codec
 endif
 
