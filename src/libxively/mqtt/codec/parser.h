@@ -51,6 +51,7 @@ typedef struct mqtt_parser_s {
   size_t digit_bytes;
   size_t multiplier;
   size_t remaining_length;
+  size_t str_length;
 } mqtt_parser_t;
 
 void mqtt_parser_init(mqtt_parser_t* parser);

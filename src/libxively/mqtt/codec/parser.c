@@ -3,42 +3,73 @@
 #include <string.h>
 
 #include "xi_stated_sscanf.h"
+#include "xi_coroutine.h"
+#include "xi_layer_interface.h"
+#include "xi_macros.h"
 
 #include "errors.h"
 #include "message.h"
 
 #include "parser.h"
 
+static layer_state_t read_string(int len, xi_stated_sscanf_state_t * xi_stated_state, void ** into, const_data_descriptor_t * data)
+{
+    char strpat[ 32 ];
+    memset( strpat, 0, sizeof( strpat ) );
+    sprintf( strpat, "%%%d.", len );
+
+    signed char sscanf_state = 0;
+    static uint16_t cs       = 0;
+    const const_data_descriptor_t pat = { strpat, strlen(strpat), strlen(strpat), 0 };
+
+    BEGIN_CORO(cs)
+    
+    while( sscanf_state == 0 )
+    {
+        sscanf_state = xi_stated_sscanf(
+                      xi_stated_state
+                    , ( const_data_descriptor_t* ) &pat
+                    , ( const_data_descriptor_t* ) data
+                    , into );
+    
+        if( sscanf_state == 0 )
+        {
+            YIELD( cs, LAYER_STATE_WANT_READ )
+            continue;
+        }
+    }
+
+    RESTART(cs, sscanf_state == -1 ? LAYER_STATE_OK : LAYER_STATE_ERROR )
+    END_CORO()
+}
+
+
+
 #define READ_STRING(into) { \
-    if ((len - *nread) < 2) { \
+    if ((len - *nread) == 0) { \
       return MQTT_PARSER_RC_INCOMPLETE; \
     } \
     \
-    size_t str_length = data[*nread] * 256 + data[*nread + 1]; \
-    \
-    if ((len - *nread - 2) < str_length) { \
+    parser->str_length = data[*nread] * 256; \
+    *nread+=1;\
+    if ((len - *nread) == 0) { \
       return MQTT_PARSER_RC_INCOMPLETE; \
     } \
+    parser->str_length += data[*nread]; \
+    *nread+=1;\
     \
-    if (parser->buffer_pending == 0) { \
-      parser->buffer_length = str_length; \
-      \
-      return MQTT_PARSER_RC_WANT_MEMORY; \
+    if ((len - *nread) == 0) { \
+      return MQTT_PARSER_RC_INCOMPLETE; \
     } \
-    \
-    parser->buffer_pending = 0; \
-    \
-    if (parser->buffer != NULL) { \
-      memcpy(parser->buffer, data + *nread + 2, ((str_length) < (parser->buffer_length) ? (str_length) : (parser->buffer_length))); \
-      \
-      into.length = ((str_length) < (parser->buffer_length) ? (str_length) : (parser->buffer_length)); \
-      into.data = parser->buffer; \
-      \
-      parser->buffer = NULL; \
-      parser->buffer_length = 0; \
-    } \
-    \
-    *nread += 2 + str_length; \
+    src.curr_pos = *nread;\
+    do {\
+      read_string_state = read_string(parser->str_length, &(parser->sscanf_state), into.data, &src); \
+      if( read_string_state == LAYER_STATE_WANT_READ ) \
+      {\
+        YIELD( cs, LAYER_STATE_WANT_READ ); \
+        continue; \
+      }\
+    }while( read_string_state != LAYER_STATE_OK ); \
 }
 
 void mqtt_parser_init(mqtt_parser_t* parser) {
@@ -55,14 +86,16 @@ void mqtt_parser_buffer(mqtt_parser_t* parser, uint8_t* buffer, size_t buffer_le
 }
 
 mqtt_parser_rc_t mqtt_parser_execute(mqtt_parser_t* parser, mqtt_message_t* message, uint8_t* data, size_t len, size_t* nread) {
-  //const char strpat[]       = "%.";
-  const const_data_descriptor_t src  = { data, len, len, 0 };
+  static uint16_t cs                 = 0;
+  const_data_descriptor_t src        = { data, len, len, 0 };
   void* dst[]                        = { ( void* ) &( parser->buffer ) };
+  layer_state_t read_string_state    = LAYER_STATE_OK;
 
+  BEGIN_CORO(cs)
 
   do {
-    switch (parser->state) {
-      case MQTT_PARSER_STATE_INITIAL: {
+    if (parser->state == MQTT_PARSER_STATE_INITIAL)
+    {
         if ((len - *nread) == 0) {
           return MQTT_PARSER_RC_INCOMPLETE;
         }
@@ -76,10 +109,9 @@ mqtt_parser_rc_t mqtt_parser_execute(mqtt_parser_t* parser, mqtt_message_t* mess
 
         parser->state = MQTT_PARSER_STATE_REMAINING_LENGTH;
 
-        break;
-      }
-
-      case MQTT_PARSER_STATE_REMAINING_LENGTH: {
+    }
+    else if (parser->state == MQTT_PARSER_STATE_REMAINING_LENGTH)
+    {
         parser->digit_bytes      = 0;
         parser->multiplier       = 1;
         parser->remaining_length = 0;
@@ -134,32 +166,26 @@ mqtt_parser_rc_t mqtt_parser_execute(mqtt_parser_t* parser, mqtt_message_t* mess
             return MQTT_PARSER_RC_ERROR;
         }
 
-        break;
       }
-
-      case MQTT_PARSER_STATE_VARIABLE_HEADER: {
-        if (message->common.type == MQTT_TYPE_CONNECT) {
+      else if (parser->state == MQTT_PARSER_STATE_VARIABLE_HEADER)
+      {
+        if (message->common.type == MQTT_TYPE_CONNECT)
+        {
           parser->state = MQTT_PARSER_STATE_CONNECT_PROTOCOL_NAME;
         }
-
-        break;
       }
-
-      case MQTT_PARSER_STATE_CONNECT: {
+      else if (parser->state == MQTT_PARSER_STATE_CONNECT)
+      {
         parser->state = MQTT_PARSER_STATE_CONNECT_PROTOCOL_NAME;
-
-        break;
       }
-
-      case MQTT_PARSER_STATE_CONNECT_PROTOCOL_NAME: {
+      else if (parser->state == MQTT_PARSER_STATE_CONNECT_PROTOCOL_NAME)
+      {
         READ_STRING(message->connect.protocol_name)
 
         parser->state = MQTT_PARSER_STATE_CONNECT_PROTOCOL_VERSION;
-
-        break;
       }
-
-      case MQTT_PARSER_STATE_CONNECT_PROTOCOL_VERSION: {
+      else if (parser->state == MQTT_PARSER_STATE_CONNECT_PROTOCOL_VERSION)
+      {
         if ((len - *nread) == 0) {
           return MQTT_PARSER_RC_INCOMPLETE;
         }
@@ -169,11 +195,9 @@ mqtt_parser_rc_t mqtt_parser_execute(mqtt_parser_t* parser, mqtt_message_t* mess
         *nread += 1;
 
         parser->state = MQTT_PARSER_STATE_CONNECT_FLAGS;
-
-        break;
       }
-
-      case MQTT_PARSER_STATE_CONNECT_FLAGS: {
+      else if (parser->state == MQTT_PARSER_STATE_CONNECT_FLAGS)
+      {
         if ((len - *nread) == 0) {
           return MQTT_PARSER_RC_INCOMPLETE;
         }
@@ -189,10 +213,9 @@ mqtt_parser_rc_t mqtt_parser_execute(mqtt_parser_t* parser, mqtt_message_t* mess
 
         parser->state = MQTT_PARSER_STATE_CONNECT_KEEP_ALIVE;
 
-        break;
       }
-
-      case MQTT_PARSER_STATE_CONNECT_KEEP_ALIVE: {
+      else if (parser->state == MQTT_PARSER_STATE_CONNECT_KEEP_ALIVE)
+      {
         if ((len - *nread) == 0) {
           return MQTT_PARSER_RC_INCOMPLETE;
         }
@@ -208,49 +231,42 @@ mqtt_parser_rc_t mqtt_parser_execute(mqtt_parser_t* parser, mqtt_message_t* mess
         *nread += 1;
 
         parser->state = MQTT_PARSER_STATE_CONNECT_CLIENT_IDENTIFIER;
-
-        break;
       }
 
-      case MQTT_PARSER_STATE_CONNECT_CLIENT_IDENTIFIER: {
+      else if (parser->state == MQTT_PARSER_STATE_CONNECT_CLIENT_IDENTIFIER)
+      {
         READ_STRING(message->connect.client_id)
 
         parser->state = MQTT_PARSER_STATE_CONNECT_WILL_TOPIC;
-
-        break;
       }
-
-      case MQTT_PARSER_STATE_CONNECT_WILL_TOPIC: {
+      else if (parser->state == MQTT_PARSER_STATE_CONNECT_WILL_TOPIC)
+      {
         if (message->connect.flags.will) {
           READ_STRING(message->connect.will_topic)
         }
 
         parser->state = MQTT_PARSER_STATE_CONNECT_WILL_MESSAGE;
-
-        break;
       }
-
-      case MQTT_PARSER_STATE_CONNECT_WILL_MESSAGE: {
+      else if (parser->state == MQTT_PARSER_STATE_CONNECT_WILL_MESSAGE)
+      {
         if (message->connect.flags.will) {
           READ_STRING(message->connect.will_message)
         }
 
         parser->state = MQTT_PARSER_STATE_CONNECT_USERNAME;
 
-        break;
       }
-
-      case MQTT_PARSER_STATE_CONNECT_USERNAME: {
+      else if (parser->state == MQTT_PARSER_STATE_CONNECT_USERNAME)
+      {
         if (message->connect.flags.username_follows) {
           READ_STRING(message->connect.username)
         }
 
         parser->state = MQTT_PARSER_STATE_CONNECT_PASSWORD;
-
-        break;
       }
 
-      case MQTT_PARSER_STATE_CONNECT_PASSWORD: {
+      else if (parser->state == MQTT_PARSER_STATE_CONNECT_PASSWORD)
+      {
         if (message->connect.flags.password_follows) {
           READ_STRING(message->connect.password)
         }
@@ -259,8 +275,8 @@ mqtt_parser_rc_t mqtt_parser_execute(mqtt_parser_t* parser, mqtt_message_t* mess
 
         return MQTT_PARSER_RC_DONE;
       }
-
-      case MQTT_PARSER_STATE_CONNACK: {
+      else if (parser->state == MQTT_PARSER_STATE_CONNACK)
+      {
         if ((len - *nread) == 0) {
           return MQTT_PARSER_RC_INCOMPLETE;
         }
@@ -279,22 +295,17 @@ mqtt_parser_rc_t mqtt_parser_execute(mqtt_parser_t* parser, mqtt_message_t* mess
 
         return MQTT_PARSER_RC_DONE;
       }
-
-      case MQTT_PARSER_STATE_PUBLISH: {
+      else if (parser->state == MQTT_PARSER_STATE_PUBLISH)
+      {
         parser->state = MQTT_PARSER_STATE_PUBLISH_TOPIC_NAME;
-
-        break;
       }
-
-      case MQTT_PARSER_STATE_PUBLISH_TOPIC_NAME: {
+      else if (parser->state == MQTT_PARSER_STATE_PUBLISH_TOPIC_NAME)
+      {
         READ_STRING(message->publish.topic_name)
 
         parser->state = MQTT_PARSER_STATE_PUBLISH_MESSAGE_ID;
-
-        break;
       }
-
-      case MQTT_PARSER_STATE_PUBLISH_MESSAGE_ID: {
+      else if (parser->state == MQTT_PARSER_STATE_PUBLISH_MESSAGE_ID) {
         if ((len - *nread) == 0) {
           return MQTT_PARSER_RC_INCOMPLETE;
         }
@@ -313,8 +324,8 @@ mqtt_parser_rc_t mqtt_parser_execute(mqtt_parser_t* parser, mqtt_message_t* mess
 
         return MQTT_PARSER_RC_DONE;
       }
-
-      case MQTT_PARSER_STATE_PUBACK: {
+      else if (parser->state == MQTT_PARSER_STATE_PUBACK)
+      {
         if ((len - *nread) == 0) {
           return MQTT_PARSER_RC_INCOMPLETE;
         }
@@ -333,8 +344,8 @@ mqtt_parser_rc_t mqtt_parser_execute(mqtt_parser_t* parser, mqtt_message_t* mess
 
         return MQTT_PARSER_RC_DONE;
       }
-
-      case MQTT_PARSER_STATE_PUBREC: {
+      else if (parser->state == MQTT_PARSER_STATE_PUBREC)
+      {
         if ((len - *nread) == 0) {
           return MQTT_PARSER_RC_INCOMPLETE;
         }
@@ -353,8 +364,8 @@ mqtt_parser_rc_t mqtt_parser_execute(mqtt_parser_t* parser, mqtt_message_t* mess
 
         return MQTT_PARSER_RC_DONE;
       }
-
-      case MQTT_PARSER_STATE_PUBREL: {
+      else if (parser->state == MQTT_PARSER_STATE_PUBREL)
+      {
         if ((len - *nread) == 0) {
           return MQTT_PARSER_RC_INCOMPLETE;
         }
@@ -373,8 +384,7 @@ mqtt_parser_rc_t mqtt_parser_execute(mqtt_parser_t* parser, mqtt_message_t* mess
 
         return MQTT_PARSER_RC_DONE;
       }
-
-      case MQTT_PARSER_STATE_PUBCOMP: {
+      else if (parser->state == MQTT_PARSER_STATE_PUBCOMP) {
         if ((len - *nread) == 0) {
           return MQTT_PARSER_RC_INCOMPLETE;
         }
@@ -393,12 +403,13 @@ mqtt_parser_rc_t mqtt_parser_execute(mqtt_parser_t* parser, mqtt_message_t* mess
 
         return MQTT_PARSER_RC_DONE;
       }
-
-      default: {
+      else
+      {
         parser->error = MQTT_ERROR_PARSER_INVALID_STATE;
 
         return MQTT_PARSER_RC_ERROR;
       }
-    }
   } while (1);
+
+  END_CORO()
 }
