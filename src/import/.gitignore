@@ -17,3 +17,7 @@ avrtest/dejagnuboards/atmega128-sim.exp
 avrtest/dejagnuboards/atxmega128-sim.exp
 avrtest/flag-tables.c
 avrtest/gen-flag-tables
+# mqtt-codec
+mqtt-codec/src/test.c
+mqtt-codec/.travis.yml
+mqtt-codec/Makefile

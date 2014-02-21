@@ -18,6 +18,12 @@ ifeq ($(XI_NOB_ENABLED),true)
     XI_SOURCES += $(wildcard nob/*.c)
 endif
 
+ifeq ($(XI_MQTT_ENABLED),true)
+    XI_SOURCES += $(wildcard $(LIBXIVELY)/src/import/mqtt-codec/src/*.c)
+    XI_CFLAGS += -DXI_MQTT_ENABLED \
+		 -I$(LIBXIVELY)/src/import/mqtt-codec/src/
+endif
+
 all: $(XI)
 
 objs: $(XI_OBJS)
