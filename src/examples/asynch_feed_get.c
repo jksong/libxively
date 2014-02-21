@@ -70,7 +70,9 @@ int main( int argc, const char* argv[] )
 
     fd_set rfds;
     struct timeval tv;
-    int retval = LAYER_STATE_WANT_WRITE, i;
+
+    int retval          = LAYER_STATE_WANT_WRITE;
+    int i               = 0;
 
     /* Watch stdin (fd 0) to see when it has input. */
     FD_ZERO( &rfds );
