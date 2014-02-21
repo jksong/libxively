@@ -54,7 +54,7 @@ const void* http_layer_data_generator_query_body(
     static unsigned short cnt_len   = 0;
     static const char* const p1     = XI_HOST;
     static const char* const p2     = XI_USER_AGENT;
-    
+
     short ret_state                         = 0;
     const const_data_descriptor_t* data     = 0;
 
@@ -64,7 +64,7 @@ const void* http_layer_data_generator_query_body(
 
             // reset the content lenght
             cnt_len = 0;
-            
+
             // SEND HOST
             gen_ptr_text( *state, XI_HTTP_TEMPLATE_HOST );
             gen_ptr_text( *state, p1 );
@@ -409,7 +409,7 @@ const void* http_layer_data_generator_datastream_delete(
         gen_ptr_text( *state, buffer_32 ); // feed id
 
         gen_ptr_text( *state, XI_CSV_SLASH );
-        gen_ptr_text( *state, XI_CSV_DATASTREAMS );        
+        gen_ptr_text( *state, XI_CSV_DATASTREAMS );
         gen_ptr_text( *state, XI_CSV_SLASH );
 
         gen_ptr_text( *state, http_layer_input->http_union_data.xi_delete_datastream.datastream );
@@ -447,13 +447,13 @@ const void* http_layer_data_generator_datapoint_delete(
         gen_ptr_text( *state, buffer_32 ); // feed id
 
         gen_ptr_text( *state, XI_CSV_SLASH );
-        gen_ptr_text( *state, XI_CSV_DATASTREAMS );        
+        gen_ptr_text( *state, XI_CSV_DATASTREAMS );
         gen_ptr_text( *state, XI_CSV_SLASH );
 
         gen_ptr_text( *state, http_layer_input->http_union_data.xi_delete_datapoint.datastream );
 
         gen_ptr_text( *state, XI_CSV_SLASH );
-        gen_ptr_text( *state, XI_CSV_DATAPOINTS );        
+        gen_ptr_text( *state, XI_CSV_DATAPOINTS );
         gen_ptr_text( *state, XI_CSV_SLASH );
 
         {
@@ -509,13 +509,13 @@ const void* http_layer_data_generator_datapoint_delete_range(
         gen_ptr_text( *state, buffer_32 ); // feed id
 
         gen_ptr_text( *state, XI_CSV_SLASH );
-        gen_ptr_text( *state, XI_CSV_DATASTREAMS );        
+        gen_ptr_text( *state, XI_CSV_DATASTREAMS );
         gen_ptr_text( *state, XI_CSV_SLASH );
 
         gen_ptr_text( *state, http_layer_input->http_union_data.xi_delete_datapoint_range.datastream );
 
         gen_ptr_text( *state, XI_CSV_SLASH );
-        gen_ptr_text( *state, XI_CSV_DATAPOINTS );        
+        gen_ptr_text( *state, XI_CSV_DATAPOINTS );
         gen_ptr_text( *state, p1 );
 
         {
@@ -577,6 +577,7 @@ static inline layer_state_t http_layer_data_ready_gen(
     // generator state
     static short gstate         = 0;
     static short local_state    = 0;
+    static layer_state_t state  = LAYER_STATE_OK;
 
     BEGIN_CORO( local_state )
 
@@ -585,14 +586,16 @@ static inline layer_state_t http_layer_data_ready_gen(
         // send the data through the next layer
         while( gstate != 1 )
         {
-            const const_data_descriptor_t* ret
-                    = ( const const_data_descriptor_t* ) ( *gen )( input, &gstate );
+            while( state == LAYER_STATE_OK && gstate != 1 )
+            {
+                const const_data_descriptor_t* ret
+                        = ( const const_data_descriptor_t* ) ( *gen )( input, &gstate );
 
-            layer_state_t state
-                    = CALL_ON_PREV_DATA_READY(
-                          context->self
-                        , ( const void* ) ret
-                        , ( gstate != 1 ) ? LAYER_HINT_MORE_DATA : LAYER_HINT_NONE );
+                state = CALL_ON_PREV_DATA_READY(
+                              context->self
+                            , ( const void* ) ret
+                            , LAYER_HINT_NONE );
+            }
 
             if( state != LAYER_STATE_OK )
             {
@@ -600,7 +603,7 @@ static inline layer_state_t http_layer_data_ready_gen(
             }
         }
 
-        EXIT( local_state, LAYER_STATE_OK )
+        EXIT( local_state, LAYER_STATE_OK );
 
     END_CORO()
 }
@@ -644,7 +647,7 @@ layer_state_t http_layer_data_ready(
             return http_layer_data_ready_gen(
                           context
                         , http_layer_input
-                        , &http_layer_data_generator_feed_get_all );            
+                        , &http_layer_data_generator_feed_get_all );
         case HTTP_LAYER_INPUT_FEED_UPDATE:
             return http_layer_data_ready_gen(
                           context
@@ -675,8 +678,8 @@ layer_state_t http_layer_on_data_ready(
     , const void* data
     , const layer_hint_t hint )
 {
-
     XI_UNUSED( hint );
+    static uint16_t cs = 0; // coroutine state
 
     // unpack http_layer_data so unpack it
     http_layer_data_t* http_layer_data = ( http_layer_data_t* ) context->self->user_data;
@@ -690,14 +693,14 @@ layer_state_t http_layer_on_data_ready(
 
     xi_stated_sscanf_state_t tmp_state;
     memset( &tmp_state, 0, sizeof( xi_stated_sscanf_state_t ) );
-    
+
     xi_stated_sscanf_state_t* xi_stated_state = &http_layer_data->xi_stated_sscanf_state;
 
-    // patterns    
+    // patterns
     const char status_pattern1[]       = "HTTP/1.1 %d %" XI_STR( XI_HTTP_STATUS_STRING_SIZE ) ".\r\n";
     const const_data_descriptor_t v1   = { status_pattern1, sizeof( status_pattern1 ) - 1, sizeof( status_pattern1 ) - 1, 0 };
     void* pv1[]                        = { ( void* ) &( http_layer_data->response->http.http_status ), ( void* ) http_layer_data->response->http.http_status_string };
-    
+
     const char status_pattern2[]       = "%" XI_STR( XI_HTTP_HEADER_NAME_MAX_SIZE ) "s: %" XI_STR( XI_HTTP_HEADER_VALUE_MAX_SIZE ) ".\r\n";
     const const_data_descriptor_t v2   = { status_pattern2, sizeof( status_pattern2 ) - 1, sizeof( status_pattern2 ) - 1, 0 };
     void*                  pv2[]       =
@@ -705,7 +708,7 @@ layer_state_t http_layer_on_data_ready(
           ( void* ) http_layer_data->response->http.http_headers[ XI_HTTP_HEADER_UNKNOWN ].name
         , ( void* ) http_layer_data->response->http.http_headers[ XI_HTTP_HEADER_UNKNOWN ].value
     };
-    
+
     const char status_pattern3[]         = "%d";
     const const_data_descriptor_t v3     = { status_pattern3, sizeof( status_pattern3 ) - 1, sizeof( status_pattern3 ) - 1, 0 };
     const_data_descriptor_t data3        =
@@ -714,9 +717,9 @@ layer_state_t http_layer_on_data_ready(
         , XI_HTTP_HEADER_VALUE_MAX_SIZE
         , XI_HTTP_HEADER_VALUE_MAX_SIZE
         , 0
-    };    
+    };
     void*                   pv3[]        = { ( void* ) &http_layer_data->content_length };
-        
+
     const char status_pattern4[]       = "\r\n";
     const const_data_descriptor_t v4   = { status_pattern4, sizeof( status_pattern4 ) - 1, sizeof( status_pattern4 ) - 1, 0 };
 
@@ -728,7 +731,7 @@ layer_state_t http_layer_on_data_ready(
     };
 
 
-    BEGIN_CORO( context->self->layer_states[ FUNCTION_ID_ON_DATA_READY ] )
+    BEGIN_CORO( cs )
 
     memset( xi_stated_state, 0, sizeof( xi_stated_sscanf_state_t ) );
 
@@ -748,17 +751,17 @@ layer_state_t http_layer_on_data_ready(
 
                 if( sscanf_state == 0 )
                 {
-                    YIELD( context->self->layer_states[ FUNCTION_ID_ON_DATA_READY ], LAYER_STATE_MORE_DATA )
+                    YIELD( cs, LAYER_STATE_WANT_READ )
                     continue;
                 }
             }
 
             if( sscanf_state == -1 )
             {
-                EXIT( context->self->layer_states[ FUNCTION_ID_ON_DATA_READY ], LAYER_STATE_ERROR )
+                EXIT( cs, LAYER_STATE_ERROR )
             }
         }
-    }    
+    }
 
     //
     xi_debug_format( "HTTP STATUS: %d", http_layer_data->response->http.http_status );
@@ -782,7 +785,7 @@ layer_state_t http_layer_on_data_ready(
 
                 if( sscanf_state == 0 )
                 {
-                    YIELD( context->self->layer_states[ FUNCTION_ID_ON_DATA_READY ], LAYER_STATE_MORE_DATA )
+                    YIELD( cs, LAYER_STATE_WANT_READ )
                     continue;
                 }
             }
@@ -801,7 +804,7 @@ layer_state_t http_layer_on_data_ready(
 
                     if( sscanf_state == -1 )
                     {
-                        EXIT( context->self->layer_states[ FUNCTION_ID_ON_DATA_READY ], LAYER_STATE_ERROR )
+                        EXIT( cs, LAYER_STATE_ERROR );
                     }
                 }
 
@@ -844,7 +847,7 @@ layer_state_t http_layer_on_data_ready(
 
             if( sscanf_state == 0 )
             {
-                YIELD( context->self->layer_states[ FUNCTION_ID_ON_DATA_READY ], LAYER_STATE_MORE_DATA )
+                YIELD( cs, LAYER_STATE_WANT_READ )
                 continue;
             }
         }
@@ -854,7 +857,7 @@ layer_state_t http_layer_on_data_ready(
     {
         xi_debug_logger( "No double \\r\\n" );
 
-        EXIT( context->self->layer_states[ FUNCTION_ID_ON_DATA_READY ], LAYER_STATE_ERROR )
+        EXIT( cs, LAYER_STATE_ERROR )
     }
 
     // STAGE 04 reading payload
@@ -879,9 +882,9 @@ layer_state_t http_layer_on_data_ready(
                                             , ( const void* ) data
                                             , ( http_layer_data->counter < http_layer_data->content_length ) ? LAYER_HINT_MORE_DATA : LAYER_HINT_NONE );
 
-                if( state == LAYER_STATE_MORE_DATA && http_layer_data->counter < http_layer_data->content_length )
+                if( state == LAYER_STATE_WANT_READ && http_layer_data->counter < http_layer_data->content_length )
                 {
-                    YIELD( context->self->layer_states[ FUNCTION_ID_ON_DATA_READY ], LAYER_STATE_MORE_DATA );
+                    YIELD( cs, LAYER_STATE_WANT_READ );
                 }
             }
             else
@@ -896,7 +899,7 @@ layer_state_t http_layer_on_data_ready(
 
                 if( sscanf_state == 0 && http_layer_data->counter < http_layer_data->content_length )
                 {
-                    YIELD( context->self->layer_states[ FUNCTION_ID_ON_DATA_READY ], LAYER_STATE_MORE_DATA );
+                    YIELD( cs, LAYER_STATE_WANT_READ );
                 }
             }
         }
@@ -904,10 +907,10 @@ layer_state_t http_layer_on_data_ready(
 
     if( sscanf_state == -1 )
     {
-        EXIT( context->self->layer_states[ FUNCTION_ID_ON_DATA_READY ], LAYER_STATE_ERROR )
+        EXIT( cs, LAYER_STATE_ERROR )
     }
 
-    EXIT( context->self->layer_states[ FUNCTION_ID_ON_DATA_READY ], LAYER_STATE_OK )
+    EXIT( cs, LAYER_STATE_OK )
 
     END_CORO()
 }

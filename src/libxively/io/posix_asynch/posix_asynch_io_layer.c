@@ -16,9 +16,10 @@
 #include "xi_err.h"
 #include "xi_macros.h"
 #include "xi_debug.h"
-
 #include "xi_layer_api.h"
 #include "xi_common.h"
+#include "xi_connection_data.h"
+#include "xi_coroutine.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -32,13 +33,23 @@ layer_state_t posix_asynch_io_layer_data_ready(
     posix_asynch_data_t* posix_asynch_data  = ( posix_asynch_data_t* ) context->self->user_data;
     const const_data_descriptor_t* buffer   = ( const const_data_descriptor_t* ) data;
 
-    xi_debug_printf( "%s", buffer->data_ptr );
-
     XI_UNUSED( hint );
 
     if( buffer != 0 && buffer->data_size > 0 )
     {
         int len = write( posix_asynch_data->socket_fd, buffer->data_ptr, buffer->data_size );
+
+        if( len < 0 )
+        {
+            int errval = errno;
+            if( errval == EAGAIN ) // that can happen
+            {
+                return LAYER_STATE_WANT_WRITE;
+            }
+
+            xi_debug_printf( "error reading: errno = %d \n", errval );
+            return LAYER_STATE_ERROR;
+        }
 
         if( len < buffer->data_size )
         {
@@ -46,7 +57,7 @@ layer_state_t posix_asynch_io_layer_data_ready(
         }
     }
 
-    return LAYER_STATE_NOT_READY;
+    return hint == LAYER_HINT_MORE_DATA ? LAYER_STATE_WANT_WRITE : LAYER_STATE_OK;
 }
 
 layer_state_t posix_asynch_io_layer_on_data_ready(
@@ -84,7 +95,7 @@ layer_state_t posix_asynch_io_layer_on_data_ready(
         int errval = errno;
         if( errval == EAGAIN ) // that can happen
         {
-            return LAYER_STATE_NOT_READY;
+            return LAYER_STATE_WANT_READ;
         }
 
         xi_debug_printf( "error reading: errno = %d \n", errval );
@@ -96,11 +107,6 @@ layer_state_t posix_asynch_io_layer_on_data_ready(
     buffer->data_ptr[ buffer->real_size ] = '\0'; // put guard
     buffer->curr_pos = 0;
     state = CALL_ON_NEXT_ON_DATA_READY( context->self, ( void* ) buffer, LAYER_HINT_MORE_DATA );
-
-    if( state == LAYER_STATE_MORE_DATA )
-    {
-        return LAYER_STATE_NOT_READY;
-    }
 
     return state;
 }
@@ -145,26 +151,29 @@ err_handling:
     return ret;
 }
 
-layer_t* connect_to_endpoint(
-      layer_t* layer
-    , const char* address
-    , const int port )
+layer_state_t posix_asynch_io_layer_init(
+      layer_connectivity_t* context
+    , const void* data
+    , const layer_hint_t hint )
 {
+    XI_UNUSED( hint );
+    XI_UNUSED( data );
 
-#ifdef XI_DEBUG_OUTPUT
-        char msg[ 64 ] = { '\0' };
-        sprintf( msg, "Connecting layer [%d] to the endpoint", layer->layer_type_id );
-        xi_debug_logger( msg );
-#endif
+    // PRECONDITIONS
+    assert( context != 0 );
 
-    posix_asynch_data_t* posix_asynch_data                    = xi_alloc( sizeof( posix_asynch_data_t ) );
+    xi_debug_logger( "[posix_io_layer_init]" );
+
+    layer_t* layer                              = ( layer_t* ) context->self;
+    posix_asynch_data_t* posix_asynch_data      = xi_alloc( sizeof( posix_asynch_data_t ) );
 
     XI_CHECK_MEMORY( posix_asynch_data );
 
     layer->user_data                            = ( void* ) posix_asynch_data;
 
     xi_debug_logger( "Creating socket..." );
-    posix_asynch_data->socket_fd                       = socket( AF_INET, SOCK_STREAM, 0 );
+
+    posix_asynch_data->socket_fd                = socket( AF_INET, SOCK_STREAM, 0 );
 
     if( posix_asynch_data->socket_fd == -1 )
     {
@@ -172,8 +181,6 @@ layer_t* connect_to_endpoint(
         xi_set_err( XI_SOCKET_INITIALIZATION_ERROR );
         return 0;
     }
-
-    xi_debug_logger( "Socket creation [ok]" );
 
     xi_debug_logger( "Setting socket non blocking behaviour..." );
 
@@ -193,14 +200,45 @@ layer_t* connect_to_endpoint(
         goto err_handling;
     }
 
-     // socket specific data
+    xi_debug_logger( "Socket creation [ok]" );
+
+    // POSTCONDITIONS
+    assert( layer->user_data != 0 );
+    assert( posix_asynch_data->socket_fd != -1 );
+
+    return LAYER_STATE_OK;
+
+err_handling:
+    // cleanup the memory
+    if( posix_asynch_data )     { close( posix_asynch_data->socket_fd ); }
+    if( layer->user_data )      { XI_SAFE_FREE( layer->user_data ); }
+
+    return LAYER_STATE_ERROR;
+}
+
+layer_state_t posix_asynch_io_layer_connect(
+      layer_connectivity_t* context
+    , const void* data
+    , const layer_hint_t hint )
+{
+    XI_UNUSED( hint );
+
+    static uint16_t cs = 0; // local coroutine prereserved state
+
+    xi_connection_data_t* connection_data   = ( xi_connection_data_t* ) data;
+    layer_t* layer                          = ( layer_t* ) context->self;
+    posix_asynch_data_t* posix_asynch_data  = ( posix_asynch_data_t* ) layer->user_data;
+
+    BEGIN_CORO( cs )
+
+    xi_debug_format( "Connecting layer [%d] to the endpoint", layer->layer_type_id );
+
+    // socket specific data
     struct sockaddr_in name;
     struct hostent* hostinfo;
 
-    xi_debug_logger( "Getting host by name..." );
-
     // get the hostaddress
-    hostinfo = gethostbyname( address );
+    hostinfo = gethostbyname( connection_data->address );
 
     // if null it means that the address has not been founded
     if( hostinfo == NULL )
@@ -216,7 +254,7 @@ layer_t* connect_to_endpoint(
     memset( &name, 0, sizeof( struct sockaddr_in ) );
     name.sin_family     = AF_INET;
     name.sin_addr       = *( ( struct in_addr* ) hostinfo->h_addr );
-    name.sin_port       = htons( port );
+    name.sin_port       = htons( connection_data->port );
 
     xi_debug_logger( "Connecting to the endpoint..." );
 
@@ -224,26 +262,27 @@ layer_t* connect_to_endpoint(
     {
         if( errno != EINPROGRESS )
         {
-            xi_debug_printf( "%d", errno );
+            xi_debug_printf( "errno: %d", errno );
             xi_debug_logger( "Connecting to the endpoint [failed]" );
             xi_set_err( XI_SOCKET_CONNECTION_ERROR );
             goto err_handling;
         }
+        else
+        {
+            YIELD( cs, LAYER_STATE_WANT_WRITE ); // return here whenever we can write
+        }
     }
 
-    xi_debug_logger( "Connecting to the endpoint [ok]" );
-
-    // POSTCONDITIONS
-    assert( layer != 0 );
-    assert( posix_asynch_data->socket_fd != -1 );
-
-    return layer;
+    EXIT( cs, LAYER_STATE_OK );
 
 err_handling:
     // cleanup the memory
-    if( posix_asynch_data ) { XI_SAFE_FREE( posix_asynch_data ); }
+    if( posix_asynch_data )     { close( posix_asynch_data->socket_fd ); }
+    if( layer->user_data )      { XI_SAFE_FREE( layer->user_data ); }
 
-    return 0;
+    EXIT( cs, LAYER_STATE_ERROR );
+
+    END_CORO()
 }
 
 #ifdef __cplusplus
