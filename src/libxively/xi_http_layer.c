@@ -804,7 +804,7 @@ layer_state_t http_layer_on_data_ready(
 
                     if( sscanf_state == -1 )
                     {
-                        EXIT( cs, LAYER_STATE_ERROR )
+                        EXIT( cs, LAYER_STATE_ERROR );
                     }
                 }
 
