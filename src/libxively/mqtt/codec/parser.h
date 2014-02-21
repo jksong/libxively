@@ -4,6 +4,8 @@
 #include <stdint.h>
 #include <stddef.h>
 
+#include "xi_stated_sscanf.h"
+
 #include "errors.h"
 #include "message.h"
 
@@ -41,10 +43,14 @@ typedef enum mqtt_parser_state_e {
 
 typedef struct mqtt_parser_s {
   mqtt_parser_state_t state;
+  xi_stated_sscanf_state_t sscanf_state;
   mqtt_error_t error;
   char buffer_pending;
   uint8_t* buffer;
   size_t buffer_length;
+  size_t digit_bytes;
+  size_t multiplier;
+  size_t remaining_length;
 } mqtt_parser_t;
 
 void mqtt_parser_init(mqtt_parser_t* parser);
