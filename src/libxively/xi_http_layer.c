@@ -928,14 +928,6 @@ layer_state_t http_layer_on_close(
     return  CALL_ON_NEXT_ON_CLOSE( context->self );
 }
 
-layer_t* init_http_layer(
-      layer_t* layer )
-{
-    XI_UNUSED( layer );
-
-    return LAYER_STATE_OK;
-}
-
 #ifdef __cplusplus
 }
 #endif
