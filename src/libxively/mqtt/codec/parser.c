@@ -45,31 +45,35 @@ static layer_state_t read_string(int len, xi_stated_sscanf_state_t * xi_stated_s
 
 
 
-#define READ_STRING(into) { \
+#define READ_STRING(into) \
+{ \
     if ((len - *nread) == 0) { \
-      return MQTT_PARSER_RC_INCOMPLETE; \
+      YIELD( cs, LAYER_STATE_WANT_READ ) \
+      continue; \
     } \
     \
-    parser->str_length = data[*nread] * 256; \
-    *nread+=1;\
+    parser->str_length = (data[*nread] << 8); \
+    *nread += 1; \
     if ((len - *nread) == 0) { \
-      return MQTT_PARSER_RC_INCOMPLETE; \
+      YIELD( cs, LAYER_STATE_WANT_READ ) \
+      continue; \
     } \
     parser->str_length += data[*nread]; \
-    *nread+=1;\
+    *nread += 1; \
     \
     if ((len - *nread) == 0) { \
-      return MQTT_PARSER_RC_INCOMPLETE; \
+      YIELD( cs, LAYER_STATE_WANT_READ ) \
+      continue; \
     } \
     src.curr_pos = *nread;\
-    do {\
+    do { \
       read_string_state = read_string(parser->str_length, &(parser->sscanf_state), into.data, &src); \
       if( read_string_state == LAYER_STATE_WANT_READ ) \
-      {\
+      { \
         YIELD( cs, LAYER_STATE_WANT_READ ); \
         continue; \
       }\
-    }while( read_string_state != LAYER_STATE_OK ); \
+    } while( read_string_state != LAYER_STATE_OK ); \
 }
 
 void mqtt_parser_init(mqtt_parser_t* parser) {
@@ -85,7 +89,7 @@ void mqtt_parser_buffer(mqtt_parser_t* parser, uint8_t* buffer, size_t buffer_le
   parser->buffer_length = buffer_length;
 }
 
-mqtt_parser_rc_t mqtt_parser_execute(mqtt_parser_t* parser, mqtt_message_t* message, uint8_t* data, size_t len, size_t* nread) {
+layer_state_t mqtt_parser_execute(mqtt_parser_t* parser, mqtt_message_t* message, uint8_t* data, size_t len, size_t* nread) {
   static uint16_t cs                 = 0;
   const_data_descriptor_t src        = { data, len, len, 0 };
   void* dst[]                        = { ( void* ) &( parser->buffer ) };
@@ -97,7 +101,8 @@ mqtt_parser_rc_t mqtt_parser_execute(mqtt_parser_t* parser, mqtt_message_t* mess
     if (parser->state == MQTT_PARSER_STATE_INITIAL)
     {
         if ((len - *nread) == 0) {
-          return MQTT_PARSER_RC_INCOMPLETE;
+          YIELD( cs, LAYER_STATE_WANT_READ )
+          continue;
         }
 
         message->common.retain = (data[*nread + 0] >> 0) & 0x01;
@@ -120,7 +125,8 @@ mqtt_parser_rc_t mqtt_parser_execute(mqtt_parser_t* parser, mqtt_message_t* mess
           parser->digit_bytes += 1;
 
           if ((len - *nread) == 0) {
-            return MQTT_PARSER_RC_INCOMPLETE;
+            YIELD( cs, LAYER_STATE_WANT_READ )
+            continue;
           }
 
           parser->remaining_length += (data[*nread] & 0x7f) * parser->multiplier;
@@ -131,7 +137,7 @@ mqtt_parser_rc_t mqtt_parser_execute(mqtt_parser_t* parser, mqtt_message_t* mess
         if (data[*nread] >= 0x80) {
           parser->error = MQTT_ERROR_PARSER_INVALID_REMAINING_LENGTH;
 
-          return MQTT_PARSER_RC_ERROR;
+          EXIT( cs, LAYER_STATE_ERROR )
         }
 
         message->common.length = parser->remaining_length;
@@ -163,7 +169,7 @@ mqtt_parser_rc_t mqtt_parser_execute(mqtt_parser_t* parser, mqtt_message_t* mess
         else
         {
             parser->error = MQTT_ERROR_PARSER_INVALID_MESSAGE_ID;
-            return MQTT_PARSER_RC_ERROR;
+            EXIT( cs, LAYER_STATE_ERROR )
         }
 
       }
@@ -187,7 +193,8 @@ mqtt_parser_rc_t mqtt_parser_execute(mqtt_parser_t* parser, mqtt_message_t* mess
       else if (parser->state == MQTT_PARSER_STATE_CONNECT_PROTOCOL_VERSION)
       {
         if ((len - *nread) == 0) {
-          return MQTT_PARSER_RC_INCOMPLETE;
+          YIELD( cs, LAYER_STATE_WANT_READ )
+          continue;
         }
 
         message->connect.protocol_version = data[*nread];
@@ -199,7 +206,8 @@ mqtt_parser_rc_t mqtt_parser_execute(mqtt_parser_t* parser, mqtt_message_t* mess
       else if (parser->state == MQTT_PARSER_STATE_CONNECT_FLAGS)
       {
         if ((len - *nread) == 0) {
-          return MQTT_PARSER_RC_INCOMPLETE;
+          YIELD( cs, LAYER_STATE_WANT_READ )
+          continue;
         }
 
         message->connect.flags.username_follows = (data[*nread] >> 7) & 0x01;
@@ -217,14 +225,16 @@ mqtt_parser_rc_t mqtt_parser_execute(mqtt_parser_t* parser, mqtt_message_t* mess
       else if (parser->state == MQTT_PARSER_STATE_CONNECT_KEEP_ALIVE)
       {
         if ((len - *nread) == 0) {
-          return MQTT_PARSER_RC_INCOMPLETE;
+          YIELD( cs, LAYER_STATE_WANT_READ )
+          continue;
         }
 
         message->connect.keep_alive = (data[*nread] << 8);
         *nread += 1;
 
         if ((len - *nread) == 0) {
-          return MQTT_PARSER_RC_INCOMPLETE;
+          YIELD( cs, LAYER_STATE_WANT_READ )
+          continue;
         }
 
         message->connect.keep_alive += data[*nread];
@@ -273,19 +283,21 @@ mqtt_parser_rc_t mqtt_parser_execute(mqtt_parser_t* parser, mqtt_message_t* mess
 
         parser->state = MQTT_PARSER_STATE_INITIAL;
 
-        return MQTT_PARSER_RC_DONE;
+        EXIT( cs, LAYER_STATE_OK )
       }
       else if (parser->state == MQTT_PARSER_STATE_CONNACK)
       {
         if ((len - *nread) == 0) {
-          return MQTT_PARSER_RC_INCOMPLETE;
+          YIELD( cs, LAYER_STATE_WANT_READ )
+          continue;
         }
 
         message->connack._unused     = data[*nread];
         *nread += 1;
 
         if ((len - *nread) == 0) {
-          return MQTT_PARSER_RC_INCOMPLETE;
+          YIELD( cs, LAYER_STATE_WANT_READ )
+          continue;
         }
 
         message->connack.return_code = data[*nread];
@@ -293,7 +305,7 @@ mqtt_parser_rc_t mqtt_parser_execute(mqtt_parser_t* parser, mqtt_message_t* mess
 
         parser->state = MQTT_PARSER_STATE_INITIAL;
 
-        return MQTT_PARSER_RC_DONE;
+        EXIT( cs, LAYER_STATE_OK )
       }
       else if (parser->state == MQTT_PARSER_STATE_PUBLISH)
       {
@@ -307,14 +319,16 @@ mqtt_parser_rc_t mqtt_parser_execute(mqtt_parser_t* parser, mqtt_message_t* mess
       }
       else if (parser->state == MQTT_PARSER_STATE_PUBLISH_MESSAGE_ID) {
         if ((len - *nread) == 0) {
-          return MQTT_PARSER_RC_INCOMPLETE;
+          YIELD( cs, LAYER_STATE_WANT_READ )
+          continue;
         }
 
         message->publish.message_id = (data[*nread] << 8);
         *nread += 1;
 
         if ((len - *nread) == 0) {
-          return MQTT_PARSER_RC_INCOMPLETE;
+          YIELD( cs, LAYER_STATE_WANT_READ )
+          continue;
         }
 
         message->publish.message_id += data[*nread];
@@ -322,19 +336,21 @@ mqtt_parser_rc_t mqtt_parser_execute(mqtt_parser_t* parser, mqtt_message_t* mess
 
         parser->state = MQTT_PARSER_STATE_INITIAL;
 
-        return MQTT_PARSER_RC_DONE;
+        EXIT( cs, LAYER_STATE_OK )
       }
       else if (parser->state == MQTT_PARSER_STATE_PUBACK)
       {
         if ((len - *nread) == 0) {
-          return MQTT_PARSER_RC_INCOMPLETE;
+          YIELD( cs, LAYER_STATE_WANT_READ )
+          continue;
         }
 
         message->puback.message_id = (data[*nread] << 8);
         *nread += 1;
 
         if ((len - *nread) == 0) {
-          return MQTT_PARSER_RC_INCOMPLETE;
+          YIELD( cs, LAYER_STATE_WANT_READ )
+          continue;
         }
 
         message->puback.message_id += data[*nread];
@@ -342,19 +358,21 @@ mqtt_parser_rc_t mqtt_parser_execute(mqtt_parser_t* parser, mqtt_message_t* mess
 
         parser->state = MQTT_PARSER_STATE_INITIAL;
 
-        return MQTT_PARSER_RC_DONE;
+        EXIT( cs, LAYER_STATE_OK )
       }
       else if (parser->state == MQTT_PARSER_STATE_PUBREC)
       {
         if ((len - *nread) == 0) {
-          return MQTT_PARSER_RC_INCOMPLETE;
+          YIELD( cs, LAYER_STATE_WANT_READ )
+          continue;
         }
 
         message->pubrec.message_id = (data[*nread] << 8);
         *nread += 1;
 
         if ((len - *nread) == 0) {
-          return MQTT_PARSER_RC_INCOMPLETE;
+          YIELD( cs, LAYER_STATE_WANT_READ )
+          continue;
         }
 
         message->pubrec.message_id += data[*nread];
@@ -362,19 +380,21 @@ mqtt_parser_rc_t mqtt_parser_execute(mqtt_parser_t* parser, mqtt_message_t* mess
 
         parser->state = MQTT_PARSER_STATE_INITIAL;
 
-        return MQTT_PARSER_RC_DONE;
+        EXIT( cs, LAYER_STATE_OK )
       }
       else if (parser->state == MQTT_PARSER_STATE_PUBREL)
       {
         if ((len - *nread) == 0) {
-          return MQTT_PARSER_RC_INCOMPLETE;
+          YIELD( cs, LAYER_STATE_WANT_READ )
+          continue;
         }
 
         message->pubrel.message_id = (data[*nread] << 8);
         *nread += 1;
 
         if ((len - *nread) == 0) {
-          return MQTT_PARSER_RC_INCOMPLETE;
+          YIELD( cs, LAYER_STATE_WANT_READ )
+          continue;
         }
 
         message->pubrel.message_id += data[*nread];
@@ -382,18 +402,20 @@ mqtt_parser_rc_t mqtt_parser_execute(mqtt_parser_t* parser, mqtt_message_t* mess
 
         parser->state = MQTT_PARSER_STATE_INITIAL;
 
-        return MQTT_PARSER_RC_DONE;
+        EXIT( cs, LAYER_STATE_OK )
       }
       else if (parser->state == MQTT_PARSER_STATE_PUBCOMP) {
         if ((len - *nread) == 0) {
-          return MQTT_PARSER_RC_INCOMPLETE;
+          YIELD( cs, LAYER_STATE_WANT_READ )
+          continue;
         }
 
         message->pubcomp.message_id = (data[*nread] << 8);
         *nread += 1;
 
         if ((len - *nread) == 0) {
-          return MQTT_PARSER_RC_INCOMPLETE;
+          YIELD( cs, LAYER_STATE_WANT_READ )
+          continue;
         }
 
         message->pubcomp.message_id = data[*nread];
@@ -401,13 +423,13 @@ mqtt_parser_rc_t mqtt_parser_execute(mqtt_parser_t* parser, mqtt_message_t* mess
 
         parser->state = MQTT_PARSER_STATE_INITIAL;
 
-        return MQTT_PARSER_RC_DONE;
+        EXIT( cs, LAYER_STATE_OK )
       }
       else
       {
         parser->error = MQTT_ERROR_PARSER_INVALID_STATE;
 
-        return MQTT_PARSER_RC_ERROR;
+        EXIT( cs, LAYER_STATE_ERROR )
       }
   } while (1);
 
