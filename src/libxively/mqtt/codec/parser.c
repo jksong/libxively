@@ -12,11 +12,10 @@
 
 #include "parser.h"
 
-static layer_state_t read_string(int len, xi_stated_sscanf_state_t * xi_stated_state, void ** into, const_data_descriptor_t * data, size_t * nread)
+static layer_state_t read_string(mqtt_parser_t* parser, void ** into, const_data_descriptor_t * data, size_t * nread)
 {
     char strpat[ 32 ];
     memset( strpat, 0, sizeof( strpat ) );
-    sprintf( strpat, "%%%d.", len );
 
     signed char sscanf_state = 0;
     static uint16_t cs       = 0;
@@ -32,11 +31,13 @@ static layer_state_t read_string(int len, xi_stated_sscanf_state_t * xi_stated_s
     *nread += 1;
     YIELD_ON( cs, ( (len - *nread) == 0 ), LAYER_STATE_WANT_READ )
     data.curr_pos = *nread;
+
+    sprintf( strpat, "%%%d.", parser->str_length );
     
     while( sscanf_state == 0 )
     {
         sscanf_state = xi_stated_sscanf(
-                      xi_stated_state
+                      &(parser->sscanf_state)
                     , ( const_data_descriptor_t* ) &pat
                     , ( const_data_descriptor_t* ) data
                     , into );
@@ -51,7 +52,7 @@ static layer_state_t read_string(int len, xi_stated_sscanf_state_t * xi_stated_s
 #define READ_STRING(into) \
 { \
     do { \
-      read_string_state = read_string(parser->str_length, &(parser->sscanf_state), into.data, &src, nread); \
+      read_string_state = read_string(parser, into.data, &src, nread); \
       YIELD_ON( cs, ( read_string_state == LAYER_STATE_WANT_READ ), LAYER_STATE_WANT_READ ) \
     } while( read_string_state != LAYER_STATE_OK ); \
 };
