@@ -5,6 +5,7 @@
 #include <stddef.h>
 
 #include "xi_stated_sscanf.h"
+#include "xi_layer_interface.h"
 
 #include "errors.h"
 #include "message.h"
@@ -56,6 +57,6 @@ typedef struct mqtt_parser_s {
 
 void mqtt_parser_init(mqtt_parser_t* parser);
 void mqtt_parser_buffer(mqtt_parser_t* parser, uint8_t* buffer, size_t buffer_length);
-mqtt_parser_rc_t mqtt_parser_execute(mqtt_parser_t* parser, mqtt_message_t* message, uint8_t* data, size_t len, size_t* nread);
+layer_state_t mqtt_parser_execute(mqtt_parser_t* parser, mqtt_message_t* message, uint8_t* data, size_t len, size_t* nread);
 
 #endif
