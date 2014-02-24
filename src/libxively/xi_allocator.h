@@ -4,6 +4,8 @@
 #ifndef __XI_ALLOCATOR_H__
 #define __XI_ALLOCATOR_H__
 
+#include <stdlib.h>
+
 #include "xi_config.h"
 
 #ifdef __cplusplus
