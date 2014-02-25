@@ -28,8 +28,8 @@
 #include "xi_http_layer.h"
 #include "xi_http_layer_data.h"
 #include "xi_csv_layer.h"
-#include "xi_mqtt_layer.h"
-#include "xi_mqtt_layer_data.h"
+//#include "xi_mqtt_layer.h"
+//#include "xi_mqtt_layer_data.h"
 #include "xi_connection_data.h"
 
 #ifdef __cplusplus
