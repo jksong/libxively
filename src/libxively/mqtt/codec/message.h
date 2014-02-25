@@ -1,6 +1,7 @@
 #ifndef MQTT_H
 #define MQTT_H
 
+#include <stdio.h>
 #include <stdint.h>
 
 #include "buffer.h"
