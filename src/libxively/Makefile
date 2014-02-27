@@ -3,7 +3,7 @@ include $(LIBXIVELY)/Makefile.include
 
 XI_LAYER_DIRS := comm_layers/$(XI_COMM_LAYER)
 
-XI_CFLAGS += -I./ \
+XI_CFLAGS += -I. \
 	$(foreach layerdir,$(XI_LAYER_DIRS),-I./$(layerdir))
 
 XI_SOURCES = $(wildcard *.c) \
@@ -15,7 +15,7 @@ objs: $(XI_OBJS)
 deps: $(XI_DEPS)
 
 $(XI): $(XI_OBJS)
-	$(AR) $(XI_ARFLAGS) $(XI) $(XI_OBJS)
+	$(AR) $(XI_ARFLAGS) $(shell cygpath -a -m $(XI)) $(shell cygpath -a -m $(XI_OBJS))
 
 include $(LIBXIVELY)/Makefile.rules
 

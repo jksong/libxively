@@ -1,12 +1,12 @@
 # These are the most generic rules we use, let's define it here.
 
 $(XI_OBJDIR)/%.o : %.c
-	@-mkdir -p $(dir $@)
-	$(CC) $(XI_CFLAGS) -c $< -o $@
+	@-mkdir -p "$(shell cygpath -a -m $(dir $@))"
+	$(CC) $(XI_CFLAGS) -c $(shell cygpath -a -m $<) -o "$(shell cygpath -a -m $@)"
 
 $(XI_OBJDIR)/%.d : %.c
-	@-mkdir -p $(dir $@)
-	@$(CC) $(XI_CFLAGS) -MM $< -MF $@ -MT $(@:.d=.o)
+	@-mkdir -p "$(shell cygpath -a -m $(dir $@))"
+	@$(CC) $(XI_CFLAGS) -MM $< -MF "$(shell cygpath -a -m $@)" -MT $(@:.d=.o)
 
 clean:
 	$(RM) -rf $(XI_BINDIR)

@@ -8,6 +8,13 @@ clean:
 	-rm -rf doc/html
 	$(MAKE) -C src $@
 
+ci_arm:
+	$(MAKE) -C src clean
+	$(MAKE) -C src libxively \
+		CC=arm-none-eabi-gcc AR=arm-none-eabi-ar \
+		XI_DEBUG_ASSERT=0 XI_DEBUG_OUTPUT=0 \
+		XI_COMM_LAYER=nq
+
 ci_msp430:
 	$(MAKE) -C src clean
 	$(MAKE) -C src libxively \
@@ -21,6 +28,7 @@ ci_avr:
 		CC=avr-gcc AR=avr-ar \
 		XI_DEBUG_ASSERT=0 XI_DEBUG_OUTPUT=0 \
 		XI_COMM_LAYER=dummy
+
 
 MBED_HEAD ?= HEAD
 MBED_TEMP ?= mbed_mercurial

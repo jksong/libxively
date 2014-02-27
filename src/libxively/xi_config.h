@@ -39,7 +39,7 @@
 #endif
 
 #ifndef XI_HTTP_MAX_CONTENT_SIZE
-#define XI_HTTP_MAX_CONTENT_SIZE           512
+#define XI_HTTP_MAX_CONTENT_SIZE           192
 #endif
 
 #ifndef XI_MAX_DATASTREAMS
@@ -59,15 +59,15 @@
 #endif
 
 #ifndef XI_QUERY_BUFFER_SIZE
-#define XI_QUERY_BUFFER_SIZE               512
+#define XI_QUERY_BUFFER_SIZE               128
 #endif
 
 #ifndef XI_ID_BUFFER_SIZE
-#define XI_ID_BUFFER_SIZE                  256
+#define XI_ID_BUFFER_SIZE                  64
 #endif
 
 #ifndef XI_CONTENT_BUFFER_SIZE
-#define XI_CONTENT_BUFFER_SIZE             256
+#define XI_CONTENT_BUFFER_SIZE             64
 #endif
 
 #ifndef XI_CSV_BUFFER_SIZE

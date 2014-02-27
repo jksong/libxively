@@ -38,7 +38,7 @@ extern "C" {
     #include <assert.h>
 #else
     /* The actual header is missing in some toolchains, so we wrap it here. */
-    #define assert(e) ((void)0)
+    #define assert(e) 
 #endif
 
 #ifdef __cplusplus
