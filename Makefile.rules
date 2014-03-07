@@ -1,12 +1,23 @@
+# -*- mode:Makefile -*-
 # These are the most generic rules we use, let's define it here.
 
 $(XI_OBJDIR)/%.o : %.c
+ifeq ($(findstring CYGWIN,$(shell uname)),CYGWIN)
 	@-mkdir -p "$(shell cygpath -a -m $(dir $@))"
 	$(CC) $(XI_CFLAGS) -c $(shell cygpath -a -m $<) -o "$(shell cygpath -a -m $@)"
+else
+	@-mkdir -p $(dir $@)
+	$(CC) $(XI_CFLAGS) -c $< -o $@
+endif
 
 $(XI_OBJDIR)/%.d : %.c
+ifeq ($(findstring CYGWIN,$(shell uname)),CYGWIN)
 	@-mkdir -p "$(shell cygpath -a -m $(dir $@))"
 	@$(CC) $(XI_CFLAGS) -MM $< -MF "$(shell cygpath -a -m $@)" -MT $(@:.d=.o)
+else
+	@-mkdir -p $(dir $@)
+	@$(CC) $(XI_CFLAGS) -MM $< -MF $@ -MT $(@:.d=.o)
+endif
 
 clean:
 	$(RM) -rf $(XI_BINDIR)

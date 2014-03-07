@@ -15,7 +15,11 @@ objs: $(XI_OBJS)
 deps: $(XI_DEPS)
 
 $(XI): $(XI_OBJS)
+ifeq ($(findstring CYGWIN,$(shell uname)),CYGWIN)
 	$(AR) $(XI_ARFLAGS) $(shell cygpath -a -m $(XI)) $(shell cygpath -a -m $(XI_OBJS))
+else
+	$(AR) $(XI_ARFLAGS) $(XI) $(XI_OBJS)
+endif
 
 include $(LIBXIVELY)/Makefile.rules
 
