@@ -60,7 +60,7 @@ connection_t* nq_open_connection( const char* address, int32_t port )
 
 	// initalize the tcp connection
 	nq_comm_data->tc_idx = tcp_connect(ip6_addr, port);	// blocked for handshaking
-	if( nq_comm_data->tc_idx == TCP_MAX_CONNS)
+	if( nq_comm_data->tc_idx == get_tcp_max_conn() )
 	{
         xi_set_err( XI_SOCKET_CONNECTION_ERROR );
         goto err_handling;
@@ -97,7 +97,7 @@ int nq_send_data( connection_t* conn, const char* data, size_t size )
         = ( nq_comm_layer_data_specific_t* ) conn->layer_specific;
 
 
-	int bytes_written = tcp_send( nq_comm_data->tc_idx, data, size);
+	int bytes_written = tcp_send( nq_comm_data->tc_idx, (void*)data, size);
 
     if( bytes_written == - 1 )
     {
